@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -40,7 +41,7 @@ class VoiceDataset(Dataset):
             x = self.transform(x)
         return x, self.y[idx]
 
-def get_dataloaders(dataset_path="ADL/dataset_processed.pt", batch_size=32, use_specaug=True):
+def get_dataloaders(dataset_path="MT/dataset_processed.pt" if os.path.exists("MT/dataset_processed.pt") else "ADL/dataset_processed.pt", batch_size=32, use_specaug=True):
     data = torch.load(dataset_path, weights_only=False)
     
     train_transform = SpecAugment(freq_mask_param=16, time_mask_param=12, p=0.8) if use_specaug else None

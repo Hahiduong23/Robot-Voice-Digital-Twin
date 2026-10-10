@@ -1,5 +1,5 @@
 # =========================================================================
-# Export M5_SE_VoiceResNet to Standalone ONNX format for Web & Edge
+# Export SOTA BC-ResNet / M5 to Standalone ONNX format for Web & Edge
 # =========================================================================
 import os
 import sys
@@ -10,11 +10,12 @@ sys.path.append('MT')
 from models import get_model
 
 def export_model(
-    checkpoint_path='MT/results/M5_SE_VoiceResNet_AdamW.pth',
-    output_onnx_path='MT/results/m5_voice_resnet.onnx'
+    model_name='BC_ResNet',
+    checkpoint_path='MT/results/BC_ResNet_AdamW.pth',
+    output_onnx_path='MT/results/bc_resnet.onnx'
 ):
-    print(f'[INFO] Nạp checkpoint từ: {checkpoint_path}')
-    model = get_model('M5_SE_VoiceResNet', num_classes=7)
+    print(f'[INFO] Nạp mô hình {model_name} từ: {checkpoint_path}')
+    model = get_model(model_name, num_classes=7)
     ckpt = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     model.load_state_dict(ckpt['state_dict'])
     model.eval()
@@ -39,11 +40,10 @@ def export_model(
         dynamo=False
     )
 
-    # Validate ONNX model
     onnx_model = onnx.load(output_onnx_path)
     onnx.checker.check_model(onnx_model)
     file_size_kb = os.path.getsize(output_onnx_path) / 1024
-    print(f'[SUCCESS] Đã tạo thành công mô hình ONNX tự thân (Standalone)!')
+    print(f'[SUCCESS] Đã tạo thành công mô hình ONNX tự thân ({model_name})!')
     print(f' - Đường dẫn: {output_onnx_path}')
     print(f' - Dung lượng file: {file_size_kb:.1f} KB ({file_size_kb/1024:.2f} MB)')
 

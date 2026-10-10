@@ -71,7 +71,7 @@ def compute_mel_tensor(waveform, mel_transform, amp_to_db):
 
 def main():
     print('=========================================================================')
-    print('          BENCHMARK ĐÁNH GIÁ ĐỊNH LƯỢNG BỘ LỌC NHIỄU RNNOISE VỚI M5')
+    print('          BENCHMARK ĐÁNH GIÁ ĐỊNH LƯỢNG BỘ LỌC NHIỄU RNNOISE VỚI SOTA BC-RESNET')
     print('=========================================================================')
 
     # 1. Khởi tạo Denoiser và Mô hình M5
@@ -81,13 +81,13 @@ def main():
     )
     amp_to_db = T.AmplitudeToDB(top_db=80.0)
 
-    checkpoint_path = 'MT/results/M5_SE_VoiceResNet_AdamW.pth'
+    checkpoint_path = 'MT/results/BC_ResNet_AdamW.pth'
     if not os.path.exists(checkpoint_path):
         print(f'[ERROR] Không tìm thấy checkpoint {checkpoint_path}')
         return
 
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
-    model = get_model('M5_SE_VoiceResNet', num_classes=7)
+    model = get_model('BC_ResNet', num_classes=7)
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
 
