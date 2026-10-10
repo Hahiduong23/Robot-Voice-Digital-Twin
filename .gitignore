@@ -1,0 +1,20 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.class
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Large offline dataset tensors (keep repo fast and lightweight)
+*.pt
+Data_MT/
+HW/
+Tai_lieu_tham_khao/
+Report/

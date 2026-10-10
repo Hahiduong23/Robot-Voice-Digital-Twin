@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Digital Twin Robot Controller | M5 SE_VoiceResNet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- ONNX Runtime Web via official CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-badge">AI EDGE CYBER-PHYSICAL</div>
+        <h1 class="brand-title">ROBOT DIGITAL TWIN <span>AI VOICE</span></h1>
+        <p class="brand-subtitle">Mô hình M5 SE_VoiceResNet &bull; Lọc nhiễu RNNoise &bull; Web Bluetooth BLE</p>
+      </div>
+      <div class="header-status">
+        <div class="status-pill" id="status-model">
+          <span class="status-dot loading"></span>
+          <span class="status-text">Đang nạp AI...</span>
+        </div>
+        <div class="status-pill" id="status-ble">
+          <span class="status-dot offline"></span>
+          <span class="status-text">BLE: Ngắt kết nối</span>
+        </div>
+        <div class="status-pill" id="status-mic">
+          <span class="status-dot offline"></span>
+          <span class="status-text">Micro: Tắt</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <main class="main-grid">
+      <!-- COLUMN LEFT: ACOUSTICS & PREDICTION -->
+      <section class="grid-col left-col">
+        
+        <!-- CARD 1: CONTROL BAR -->
+        <div class="card control-bar-card">
+          <div class="control-actions">
+            <button id="btn-toggle-mic" class="btn btn-primary" disabled>
+              <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+              <span>Bật Microphone</span>
+            </button>
+            <button id="btn-connect-ble" class="btn btn-secondary">
+              <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14.88 16.29L13 18.17V14.41l1.88 1.88M13 5.83l1.88 1.88L13 9.59V5.83M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4zm-2.83 8.58L13 18.17v-3.76l1.88 1.88z"/></svg>
+              <span>📡 Kết nối Xe Robot</span>
+            </button>
+          </div>
+          <div class="denoise-toggle-wrapper">
+            <label class="switch-label" for="toggle-denoise">
+              <input type="checkbox" id="toggle-denoise" checked>
+              <span class="slider"></span>
+              <span class="label-text">Lọc nhiễu RNNoise AI</span>
+            </label>
+            <span class="badge badge-green">LATENCY: ~5.5ms</span>
+          </div>
+        </div>
+
+        <!-- CARD 2: ACOUSTIC MONITOR -->
+        <div class="card visualizer-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h3l3-9 4 18 3-9h7"/></svg>
+              GIÁM SÁT ÂM THANH TRỰC TIẾP (LIVE ACOUSTIC MONITOR)
+            </h2>
+            <div class="live-indicator" id="vad-indicator">VAD: YÊN TĨNH</div>
+          </div>
+          
+          <div class="canvas-container">
+            <div class="canvas-block">
+              <div class="canvas-label">Dạng sóng âm thời gian thực (Waveform)</div>
+              <canvas id="waveform-canvas" width="600" height="100"></canvas>
+            </div>
+            <div class="canvas-block">
+              <div class="canvas-label">Phổ Log-Mel Spectrogram cuộn liên tục (128 Bands)</div>
+              <canvas id="spectrogram-canvas" width="600" height="120"></canvas>
+            </div>
+          </div>
+          
+          <div class="audio-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Năng lượng RMS:</span>
+              <span class="metric-val" id="val-rms">-60 dB</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Tốc độ mẫu:</span>
+              <span class="metric-val">16,000 Hz</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Thời lượng buffer:</span>
+              <span class="metric-val">2.0 Giây (32,000 mẫu)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 3: SOFTMAX CONFIDENCE GAUGES -->
+        <div class="card confidence-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              XÁC SUẤT PHÂN LOẠI SOFTMAX (7 NHÃN LỆNH)
+            </h2>
+            <span class="badge badge-purple">M5 SE_VoiceResNet</span>
+          </div>
+
+          <!-- DETECTED COMMAND BANNER -->
+          <div class="detected-banner" id="detected-banner">
+            <div class="banner-icon" id="banner-icon">⏸️</div>
+            <div class="banner-info">
+              <div class="banner-label">LỆNH KÍCH HOẠT GẦN NHẤT:</div>
+              <div class="banner-command" id="banner-command">ĐANG CHỜ KHẨU LỆNH...</div>
+            </div>
+            <div class="banner-conf" id="banner-conf">--%</div>
+          </div>
+
+          <!-- 7 GAUGES -->
+          <div class="gauges-container" id="gauges-container">
+            <!-- Generated dynamically by JS -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- COLUMN RIGHT: DIGITAL TWIN SIMULATOR & TELEMETRY -->
+      <section class="grid-col right-col">
+        
+        <!-- CARD 4: DIGITAL TWIN SIMULATION ARENA -->
+        <div class="card simulation-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              SA BÀN MÔ PHỎNG SỐ DIGITAL TWIN (2D ARENA)
+            </h2>
+            <button class="btn-sm btn-ghost" id="btn-reset-sim">Đặt lại xe</button>
+          </div>
+
+          <div class="arena-wrapper">
+            <canvas id="arena-canvas" width="600" height="360"></canvas>
+            <div class="arena-hud">
+              <div class="hud-tag">VỊ TRÍ: <span id="hud-pos">(300, 180)</span></div>
+              <div class="hud-tag">GÓC QUAY: <span id="hud-angle">0°</span></div>
+              <div class="hud-tag">TỐC ĐỘ: <span id="hud-speed">0 px/s</span></div>
+              <div class="hud-tag">TRẠNG THÁI: <span id="hud-state" class="state-idle">DỪNG</span></div>
+            </div>
+          </div>
+
+          <div class="manual-keys-hint">
+            <span>🎮 Điều khiển thủ công dự phòng:</span>
+            <kbd>W</kbd> Tiến &bull; <kbd>S</kbd> Lùi &bull; <kbd>A</kbd> Rẽ Trái &bull; <kbd>D</kbd> Rẽ Phải &bull; <kbd>Space</kbd> Dừng
+          </div>
+        </div>
+
+        <!-- CARD 5: HARDWARE BLE TELEMETRY -->
+        <div class="card telemetry-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              NHẬT KÝ TRUYỀN THÔNG HARDWARE (UART / BLUETOOTH)
+            </h2>
+            <button class="btn-sm btn-ghost" id="btn-clear-log">Xóa log</button>
+          </div>
+
+          <div class="log-terminal" id="log-terminal">
+            <div class="log-entry sys">[HỆ THỐNG] Khởi tạo Digital Twin Web Dashboard thành công.</div>
+            <div class="log-entry sys">[HỆ THỐNG] Đang sẵn sàng kết nối Bluetooth BLE với chip ESP32...</div>
+          </div>
+
+          <div class="manual-hardware-controls">
+            <div class="controls-title">Bắn lệnh test trực tiếp xuống xe thật:</div>
+            <div class="hardware-buttons">
+              <button class="btn-hw" data-cmd="Tien">Tiến (F)</button>
+              <button class="btn-hw" data-cmd="Lui">Lùi (B)</button>
+              <button class="btn-hw" data-cmd="ReTrai">Rẽ Trái (L)</button>
+              <button class="btn-hw" data-cmd="RePhai">Rẽ Phải (R)</button>
+              <button class="btn-hw btn-hw-stop" data-cmd="TamDung">Dừng (S)</button>
+              <button class="btn-hw" data-cmd="KhoiDong">Bíp (K)</button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+      <div class="footer-info">
+        <strong>ĐỒ ÁN TỐT NGHIỆP / CUỐI KỲ DEEP LEARNING</strong> &bull; Sinh viên: <strong>Nguyễn Hải Dương</strong> &bull; Hướng dẫn: <strong>TS. Lê Minh Huy (ICSLab)</strong>
+      </div>
+      <div class="footer-specs">
+        M5 Parameters: <strong>310,503</strong> | Accuracy: <strong>100%</strong> | CPU Latency: <strong>5.48 ms</strong>
+      </div>
+    </footer>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="audio_engine.js"></script>
+  <script src="digital_twin.js"></script>
+  <script src="ble_controller.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

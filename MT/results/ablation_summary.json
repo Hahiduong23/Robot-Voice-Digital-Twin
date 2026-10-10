@@ -1,0 +1,52 @@
+[
+    {
+        "model_name": "M1_BaselineCNN",
+        "params": 1928711,
+        "flops_m": 5.512704,
+        "latency_ms": 1.9450870901346207,
+        "best_val_acc": 100.0,
+        "test_acc": 100.0,
+        "test_loss": 0.477614267383303,
+        "total_train_time_s": 46.39650511741638
+    },
+    {
+        "model_name": "M2_DropoutCNN",
+        "params": 1928711,
+        "flops_m": 5.512704,
+        "latency_ms": 1.89399000024423,
+        "best_val_acc": 100.0,
+        "test_acc": 100.0,
+        "test_loss": 0.48215677056993755,
+        "total_train_time_s": 46.22981905937195
+    },
+    {
+        "model_name": "M3_BatchNormCNN",
+        "params": 1929159,
+        "flops_m": 5.512704,
+        "latency_ms": 2.1287795796524733,
+        "best_val_acc": 100.0,
+        "test_acc": 100.0,
+        "test_loss": 0.49749363235064914,
+        "total_train_time_s": 59.08546304702759
+    },
+    {
+        "model_name": "M4_VoiceResNet",
+        "params": 307687,
+        "flops_m": 14.941696,
+        "latency_ms": 4.821489159949124,
+        "best_val_acc": 100.0,
+        "test_acc": 100.0,
+        "test_loss": 0.5010331383773259,
+        "total_train_time_s": 163.42630696296692
+    },
+    {
+        "model_name": "M5_SE_VoiceResNet",
+        "params": 310503,
+        "flops_m": 14.947328,
+        "latency_ms": 5.47962875047233,
+        "best_val_acc": 100.0,
+        "test_acc": 100.0,
+        "test_loss": 0.48261540702411104,
+        "total_train_time_s": 195.84298419952393
+    }
+]
