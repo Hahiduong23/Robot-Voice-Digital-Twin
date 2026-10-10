@@ -108,7 +108,7 @@ async function initApp() {
     // Load ONNX Model
     addLog("[HỆ THỐNG] Đang nạp mô hình SOTA BC-ResNet (Qualcomm) (ONNX WebAssembly)...", "sys");
     ort.env.wasm.numThreads = 1;
-    ortSession = await ort.InferenceSession.create("models/m5_voice_resnet.onnx", {
+    ortSession = await ort.InferenceSession.create("models/bc_resnet.onnx", {
       executionProviders: ["wasm"]
     });
 
@@ -119,7 +119,7 @@ async function initApp() {
     modelText.textContent = "BC-ResNet: Sẵn sàng";
 
     btnToggleMic.disabled = false;
-    addLog("[HỆ THỐNG] Nạp mô hình M5 thành công! Dung lượng: ~617 KB (Siêu nhẹ). Độ trễ: ~4.8 ms. Sẵn sàng!", "sys");
+    addLog("[HỆ THỐNG] Nạp mô hình SOTA BC-ResNet thành công! Dung lượng: ~617 KB (Siêu nhẹ). Độ trễ: ~4.8 ms. Sẵn sàng!", "sys");
 
     // Start Visualizer RAF Loop
     startVisualizerLoop();
