@@ -439,3 +439,22 @@ Khi bước sang giai đoạn Cuối kỳ, hệ thống được nâng cấp to�
 * Đã lưu Biểu đồ học tập: `MT/results/curves_BC_ResNet_AdamW.png`.
 * Đã cập nhật file ONNX chạy Web: `docs/models/bc_resnet.onnx` (617 KB) và `docs/models/m5_voice_resnet.onnx`.
 * Đã cập nhật giao diện Dashboard Web tại `docs/index.html` và `docs/app.js`.
+
+---
+
+### 8.6. GIẢI PHÁP ĐỘT PHÁ: LOẠI BỎ DOMAIN SHIFT BẰNG CƠ CHẾ VAD-GATED SPEECH ENDPOINTING & CENTER-PADDING
+
+#### 1. Nhận định cốt lõi về bản chất vấn đề:
+* **Hiện tượng**: Khi đánh giá offline trên 1,400 file đã thu, mô hình đạt độ chính xác 100% với độ tự tin (Confidence) từ 90% - 96%. Tuy nhiên khi bật micro nhận diện liên tục (Sliding Window trượt 250ms), AI nhận diện kém chính xác, độ tự tin tụt xuống chỉ còn 30% - 50%.
+* **Nguyên nhân cốt lõi (Domain Shift)**:
+  1. **Lệch pha thời gian (Temporal Misalignment)**: Trong dữ liệu huấn luyện, mọi câu nói đều được căn đúng vào **CHÍNH GIỮA (Center-padded)** khung 2.0 giây. Trong khi đó, ở cơ chế trượt liên tục 250ms, khi người dùng vừa nói xong, câu nói nằm ở **cuối cùng** của buffer 2s, các bộ lọc tích chập (Convolution) không khớp với vị trí đã học.
+  2. **Cắt dở câu lệnh (In-flight Clipping)**: Câu nói kéo dài 600ms - 800ms. Cơ chế trượt 250ms chụp phổ khi câu nói mới phát âm được một nửa, dẫn đến AI dự đoán sai.
+  3. **Tiếng ồn sàn (Ambient Noise Floor)**: Lúc yên lặng, việc ép Softmax tính toán liên tục khiến AI sinh ra ảo giác dự đoán ngẫu nhiên.
+
+#### 2. Kiến trúc giải pháp: VAD-Gated Endpointing & Center-Padding
+Hệ thống chuyển đổi hoàn toàn từ "quét định kỳ 250ms" sang cơ chế hướng sự kiện chuẩn công nghiệp (tương tự Siri & Google Assistant):
+1. **Trạng thái Yên lặng (IDLE)**: AI ở trạng thái nghỉ, duy trì Pre-roll buffer 300ms (4,800 mẫu) để lưu trọn vẹn phụ âm đầu.
+2. **Bắt đầu phát âm (Voice Onset)**: VAD phát hiện RMS vượt ngưỡng cấu hình (mặc định -42 dB), chuyển sang `RECORDING` và gom toàn bộ âm thanh câu nói.
+3. **Dứt lời (Voice Offset)**: Khi phát hiện im lặng liên tục 350ms sau câu nói, hệ thống ngắt và đóng gói câu lệnh trọn vẹn.
+4. **Căn giữa chuẩn hóa (Exact Center-Padding)**: Đoạn âm thanh câu lệnh được **căn đúng vào CHÍNH GIỮA** khung 2.0 giây (32,000 mẫu) với số 0 ở hai đầu, khớp 100% cấu trúc dữ liệu lúc huấn luyện.
+5. **Suy luận 1 lần (Event-driven Inference)**: Đưa khung 2.0s căn giữa vào BC-ResNet để suy luận đúng 1 lần duy nhất (~4.8 ms), độ tự tin đạt mức tối ưu (>90%).
