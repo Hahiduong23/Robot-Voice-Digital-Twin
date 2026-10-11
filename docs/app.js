@@ -1,6 +1,6 @@
 // ==========================================================================
-// MAIN APPLICATION COORDINATOR: Master State & VAD-Gated Real-Time Edge AI
-// Ties together: SOTA BC-ResNet (Qualcomm) + VAD Center-Padding + Digital Twin + BLE
+// MAIN APPLICATION COORDINATOR: SOTA BC-ResNet + Push-to-Talk 2.0s Normalization
+// Completely eliminates RNNoise & Domain Shift. 100% human-controlled speech capture!
 // ==========================================================================
 
 let constants = null;
@@ -11,8 +11,8 @@ let ble = null;
 
 let isProcessing = false;
 let lastCommandTime = 0;
-const COMMAND_COOLDOWN_MS = 800; // Debounce 0.8s
-const CONFIDENCE_THRESHOLD = 0.70; // 70% threshold (Optimal for Center-Padded Speech)
+const COMMAND_COOLDOWN_MS = 600; // Debounce
+const CONFIDENCE_THRESHOLD = 0.50; // Threshold for activation
 
 // DOM Elements
 const statusModel = document.getElementById("status-model");
@@ -20,17 +20,17 @@ const statusBle = document.getElementById("status-ble");
 const statusMic = document.getElementById("status-mic");
 const vadIndicator = document.getElementById("vad-indicator");
 
-const btnToggleMic = document.getElementById("btn-toggle-mic");
+const btnPttMic = document.getElementById("btn-ptt-mic");
+const pttText = document.getElementById("ptt-text");
 const btnConnectBle = document.getElementById("btn-connect-ble");
-const toggleDenoise = document.getElementById("toggle-denoise");
 const btnResetSim = document.getElementById("btn-reset-sim");
 const btnClearLog = document.getElementById("btn-clear-log");
 
 const waveformCanvas = document.getElementById("waveform-canvas");
 const spectrogramCanvas = document.getElementById("spectrogram-canvas");
 const valRms = document.getElementById("val-rms");
-const sliderVad = document.getElementById("slider-vad");
-const valVadThreshold = document.getElementById("val-vad-threshold");
+const valRecDuration = document.getElementById("val-rec-duration");
+const valRecPeak = document.getElementById("val-rec-peak");
 
 const bannerEl = document.getElementById("detected-banner");
 const bannerIcon = document.getElementById("banner-icon");
@@ -69,25 +69,6 @@ function addLog(message, type = "sys") {
   logTerminal.scrollTop = logTerminal.scrollHeight;
 }
 
-// Update VAD Visual Indicator
-function updateVadIndicator(state, rmsDb) {
-  if (!audioEngine || !audioEngine.isRecording) {
-    vadIndicator.textContent = "VAD: MICRO TẮT";
-    vadIndicator.className = "live-indicator";
-    return;
-  }
-  if (state === "RECORDING") {
-    vadIndicator.textContent = "🎙️ ĐANG NÓI... (GOM ÂM THANH)";
-    vadIndicator.className = "live-indicator recording";
-  } else if (state === "PROCESSING") {
-    vadIndicator.textContent = "⚡ ĐANG NHẬN DIỆN... (CĂN GIỮA)";
-    vadIndicator.className = "live-indicator processing";
-  } else {
-    vadIndicator.textContent = "🎧 ĐANG LẮNG NGHE (CHỜ LỆNH)";
-    vadIndicator.className = "live-indicator listening";
-  }
-}
-
 // 1. Initialize Application
 async function initApp() {
   try {
@@ -100,15 +81,6 @@ async function initApp() {
 
     // Setup Audio Engine
     audioEngine = new AudioEngine(constants);
-
-    // Setup VAD-Gated Endpointing Inference Callbacks
-    audioEngine.onUtteranceComplete = async (melTensor, centeredAudio, durationMs) => {
-      await handleUtteranceInference(melTensor, durationMs);
-    };
-
-    audioEngine.onVadStateChange = (state, rmsDb) => {
-      updateVadIndicator(state, rmsDb);
-    };
 
     // Setup BLE Controller
     ble = new BleController(
@@ -147,10 +119,10 @@ async function initApp() {
     modelDot.className = "status-dot online";
     modelText.textContent = "BC-ResNet: Sẵn sàng";
 
-    btnToggleMic.disabled = false;
-    addLog("[HỆ THỐNG] Nạp mô hình SOTA BC-ResNet thành công! Cơ chế VAD-Gated Center-Padding sẵn sàng!", "sys");
+    btnPttMic.disabled = false;
+    addLog("[HỆ THỐNG] Nạp mô hình SOTA BC-ResNet thành công! Cơ chế Push-to-Talk 2.0s chuẩn hóa đã sẵn sàng!", "sys");
 
-    // Start Visualizer RAF Loop
+    // Start Visualizer Loop
     startVisualizerLoop();
   } catch (err) {
     console.error("Init Error:", err);
@@ -209,26 +181,90 @@ function startVisualizerLoop() {
   requestAnimationFrame(render);
 }
 
-// VAD-Gated AI Inference
-async function handleUtteranceInference(melData, durationMs) {
-  if (!audioEngine || !audioEngine.isRecording || !ortSession || isProcessing) return;
+// ==========================================================================
+// PUSH-TO-TALK STATE MACHINE & EVENT HANDLERS
+// ==========================================================================
+let isHoldActive = false;
+let holdStartTime = 0;
+let isClickModeActive = false; // For toggle click mode
 
+async function handleStartSpeech() {
+  if (isProcessing) return;
+
+  if (!audioEngine.isMicOpen) {
+    const ok = await audioEngine.initMic();
+    if (!ok) {
+      addLog("[LỖI] Không thể kích hoạt microphone từ trình duyệt.", "err");
+      return;
+    }
+  }
+
+  isHoldActive = true;
+  holdStartTime = performance.now();
+  audioEngine.startRecording();
+
+  btnPttMic.classList.add("recording");
+  pttText.textContent = "🔴 ĐANG THU ÂM... (THẢ ĐỂ GỬI LỆNH)";
+  vadIndicator.textContent = "🔴 ĐANG THU ÂM KHẨU LỆNH...";
+  vadIndicator.className = "live-indicator recording";
+
+  const micDot = statusMic.querySelector(".status-dot");
+  const micText = statusMic.querySelector(".status-text");
+  micDot.className = "status-dot online";
+  micText.textContent = "Micro: Đang thu...";
+}
+
+async function handleStopSpeech() {
+  if (!isHoldActive || !audioEngine.isRecording) return;
+  isHoldActive = false;
+
+  btnPttMic.classList.remove("recording");
+  pttText.textContent = "⚡ ĐANG CÂN 2S & NHẬN DIỆN...";
+  vadIndicator.textContent = "⚡ ĐANG CÂN 2S & NHẬN DIỆN...";
+  vadIndicator.className = "live-indicator processing";
+
+  const result = audioEngine.stopRecordingAndProcess();
+
+  const micDot = statusMic.querySelector(".status-dot");
+  const micText = statusMic.querySelector(".status-text");
+  micDot.className = "status-dot online";
+  micText.textContent = "Micro: Chờ lệnh";
+
+  if (!result) {
+    addLog("[CẢNH BÁO] Thời lượng thu quá ngắn (< 0.15s). Vui lòng ấn giữ trong khi nói khẩu lệnh.", "warn");
+    vadIndicator.textContent = "🎙️ SẴN SÀNG THU ÂM";
+    vadIndicator.className = "live-indicator";
+    pttText.textContent = "🎙️ ẤN GIỮ ĐỂ NÓI (THẢ ĐỂ GỬI LỆNH)";
+    return;
+  }
+
+  // Update telemetry metrics
+  if (valRecDuration) valRecDuration.textContent = result.durationSec.toFixed(2) + " s";
+  if (valRecPeak) valRecPeak.textContent = result.maxPeak.toFixed(2) + " ➜ " + result.finalPeak.toFixed(2);
+
+  // Run AI Inference
+  await runInferenceOnResult(result);
+
+  vadIndicator.textContent = "🎙️ SẴN SÀNG THU ÂM";
+  vadIndicator.className = "live-indicator";
+  pttText.textContent = "🎙️ ẤN GIỮ ĐỂ NÓI (THẢ ĐỂ GỬI LỆNH)";
+}
+
+// AI Inference on Normalized, Center-Padded 2.0s Mel Spectrogram
+async function runInferenceOnResult(result) {
+  if (!ortSession || isProcessing) return;
   isProcessing = true;
-  try {
-    // 1. Wrap exact Log-Mel Spectrogram tensor [1, 1, 128, 63]
-    const inputTensor = new ort.Tensor("float32", melData, [1, 1, 128, 63]);
 
-    // 2. Run ONNX Inference
+  try {
+    const inputTensor = new ort.Tensor("float32", result.melTensor, [1, 1, 128, 63]);
     const t0 = performance.now();
     const feeds = { input_mel: inputTensor };
-    const results = await ortSession.run(feeds);
+    const ortResults = await ortSession.run(feeds);
     const latency = (performance.now() - t0).toFixed(1);
 
-    // 3. Output logits [1, 7] -> Softmax
-    const logits = results.logits.data;
+    const logits = ortResults.logits.data;
     const probs = softmax(logits);
 
-    // 4. Update 7 Confidence Gauges
     let maxIdx = 0;
     let maxProb = probs[0];
     for (let i = 1; i < probs.length; i++) {
@@ -238,6 +274,7 @@ async function handleUtteranceInference(melData, durationMs) {
       }
     }
 
+    // Update 7 Gauges
     constants.class_names.forEach((cls, i) => {
       const p = probs[i];
       const row = document.getElementById("gauge-" + cls);
@@ -255,11 +292,10 @@ async function handleUtteranceInference(melData, durationMs) {
       }
     });
 
-    // 5. Trigger Command if valid and confident
     const predictedClass = constants.class_names[maxIdx];
     const now = performance.now();
 
-    addLog(`[VAD PHÁT HIỆN] Bắt trọn câu (${durationMs.toFixed(0)}ms) -> ${commandNamesVi[predictedClass] || predictedClass} (${(maxProb * 100).toFixed(1)}%) - Độ trễ: ${latency}ms`, "sys");
+    addLog(`[AI PHÂN LOẠI] 🎯 Kết quả: ${commandNamesVi[predictedClass] || predictedClass} (${(maxProb * 100).toFixed(1)}%) - Thời lượng: ${(result.durationSec * 1000).toFixed(0)}ms - Độ trễ AI: ${latency}ms`, "sys");
 
     if (
       predictedClass !== "KhongXacDinh" &&
@@ -269,10 +305,11 @@ async function handleUtteranceInference(melData, durationMs) {
       lastCommandTime = now;
       handleVoiceTrigger(predictedClass, maxProb, latency);
     } else if (predictedClass === "KhongXacDinh" || maxProb < CONFIDENCE_THRESHOLD) {
-      addLog(`[BỎ QUA] Độ tin cậy chưa đạt (< ${(CONFIDENCE_THRESHOLD * 100).toFixed(0)}%). Bỏ qua kích hoạt.`, "warn");
+      addLog(`[BỎ QUA] Lệnh là 'Không Xác Định' hoặc độ tin cậy < ${(CONFIDENCE_THRESHOLD * 100).toFixed(0)}%. Bỏ qua kích hoạt robot.`, "warn");
     }
   } catch (err) {
     console.error("Inference Error:", err);
+    addLog("[LỖI AI] " + err.message, "err");
   } finally {
     isProcessing = false;
   }
@@ -338,72 +375,47 @@ function softmax(arr) {
   return exp;
 }
 
-// EVENT LISTENERS
-btnToggleMic.addEventListener("click", async () => {
-  if (!audioEngine.isRecording) {
-    const ok = await audioEngine.initMic();
-    if (ok) {
-      btnToggleMic.classList.add("recording");
-      btnToggleMic.querySelector("span").textContent = "Tắt Microphone";
-      statusMic.querySelector(".status-dot").className = "status-dot online";
-      statusMic.querySelector(".status-text").textContent = "Micro: Đang thu";
-      updateVadIndicator("IDLE", audioEngine.currentRmsDb);
-      addLog("[MICROPHONE] Đã bật thu âm 16kHz & Kích hoạt cơ chế VAD-Gated Center-Padding.", "sys");
-    }
-  } else {
-    audioEngine.stopMic();
-    btnToggleMic.classList.remove("recording");
-    btnToggleMic.querySelector("span").textContent = "Bật Microphone";
-    statusMic.querySelector(".status-dot").className = "status-dot offline";
-    statusMic.querySelector(".status-text").textContent = "Micro: Tắt";
-    updateVadIndicator("IDLE", -60);
-    addLog("[MICROPHONE] Đã tắt thu âm.", "sys");
+// ==========================================================================
+// EVENT LISTENERS: PUSH-TO-TALK (MOUSE + TOUCH + SPACEBAR)
+// ==========================================================================
+
+// Desktop Mouse Events
+btnPttMic.addEventListener("mousedown", (e) => {
+  e.preventDefault();
+  handleStartSpeech();
+});
+
+window.addEventListener("mouseup", (e) => {
+  if (isHoldActive) {
+    handleStopSpeech();
   }
 });
 
-// VAD Threshold Slider Listener
-if (sliderVad && valVadThreshold) {
-  sliderVad.addEventListener("input", (e) => {
-    const val = parseFloat(e.target.value);
-    if (audioEngine) {
-      audioEngine.vadThresholdDb = val;
-    }
-    valVadThreshold.textContent = val + " dB";
-  });
-  sliderVad.addEventListener("change", (e) => {
-    addLog(`[CẤU HÌNH] Đã chỉnh ngưỡng VAD: ${e.target.value} dB`, "sys");
-  });
-}
+// Mobile Touch Events (iOS Safari & Android Chrome)
+btnPttMic.addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  handleStartSpeech();
+}, { passive: false });
 
-btnConnectBle.addEventListener("click", async () => {
-  if (!ble.isConnected) {
-    await ble.connect();
-  } else {
-    await ble.disconnect();
-  }
-});
+btnPttMic.addEventListener("touchend", (e) => {
+  e.preventDefault();
+  handleStopSpeech();
+}, { passive: false });
 
-toggleDenoise.addEventListener("change", (e) => {
-  if (audioEngine) {
-    audioEngine.denoiseEnabled = e.target.checked;
-    addLog(`[CẤU HÌNH] Lọc nhiễu: ${e.target.checked ? "BẬT" : "TẮT"}`, "sys");
-  }
-});
+btnPttMic.addEventListener("touchcancel", (e) => {
+  e.preventDefault();
+  handleStopSpeech();
+}, { passive: false });
 
-btnResetSim.addEventListener("click", () => {
-  if (arena) {
-    arena.reset();
-    addLog("[MÔ PHỎNG] Đã đặt lại vị trí Robot về tâm sa bàn.", "sys");
-  }
-});
-
-btnClearLog.addEventListener("click", () => {
-  logTerminal.innerHTML = "";
-  addLog("[HỆ THỐNG] Đã xóa toàn bộ nhật ký.", "sys");
-});
-
-// Keyboard controls fallback for Simulation
+// Keyboard: Spacebar Hold-to-Talk
 window.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && !e.repeat && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    if (!isHoldActive) {
+      handleStartSpeech();
+    }
+  }
+  // Keyboard manual drive controls
   if (["ArrowUp", "KeyW"].includes(e.code)) {
     if (arena) arena.applyCommand("Tien");
     if (ble && ble.isConnected) ble.sendCommand("Tien");
@@ -416,10 +428,39 @@ window.addEventListener("keydown", (e) => {
   } else if (["ArrowRight", "KeyD"].includes(e.code)) {
     if (arena) arena.applyCommand("RePhai");
     if (ble && ble.isConnected) ble.sendCommand("RePhai");
-  } else if (["Space"].includes(e.code)) {
-    if (arena) arena.applyCommand("TamDung");
-    if (ble && ble.isConnected) ble.sendCommand("TamDung");
   }
+});
+
+window.addEventListener("keyup", (e) => {
+  if (e.code === "Space" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    if (isHoldActive) {
+      handleStopSpeech();
+    }
+  }
+});
+
+// BLE Connect Button
+btnConnectBle.addEventListener("click", async () => {
+  if (!ble.isConnected) {
+    await ble.connect();
+  } else {
+    await ble.disconnect();
+  }
+});
+
+// Reset Sim Button
+btnResetSim.addEventListener("click", () => {
+  if (arena) {
+    arena.reset();
+    addLog("[MÔ PHỎNG] Đã đặt lại vị trí Robot về tâm sa bàn.", "sys");
+  }
+});
+
+// Clear Log Button
+btnClearLog.addEventListener("click", () => {
+  logTerminal.innerHTML = "";
+  addLog("[HỆ THỐNG] Đã xóa toàn bộ nhật ký.", "sys");
 });
 
 // Boot application when DOM ready

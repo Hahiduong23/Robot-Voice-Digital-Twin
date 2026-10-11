@@ -742,3 +742,43 @@ kbd {
   height: 4px;
   width: 90px;
 }
+
+
+/* === PUSH-TO-TALK BUTTON ENHANCEMENTS === */
+.btn-ptt {
+  flex: 1.6 !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  touch-action: manipulation !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-ptt:active, .btn-ptt.recording {
+  background: linear-gradient(135deg, #ef4444, #b91c1c) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.6) !important;
+  transform: scale(0.98) !important;
+  animation: pulse-ptt 0.8s infinite alternate !important;
+}
+
+@keyframes pulse-ptt {
+  from { box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
+  to { box-shadow: 0 0 30px rgba(239, 68, 68, 0.9); }
+}
+
+.ptt-hint-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.78rem;
+}
+
+.ptt-subhint {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}

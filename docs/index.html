@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2.3">
+  <link rel="stylesheet" href="style.css?v=3.0">
   <!-- ONNX Runtime Web via official CDN -->
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 </head>
@@ -18,7 +18,7 @@
       <div class="header-brand">
         <div class="brand-badge">AI EDGE CYBER-PHYSICAL</div>
         <h1 class="brand-title">ROBOT DIGITAL TWIN <span>AI VOICE</span></h1>
-        <p class="brand-subtitle">Mô hình SOTA BC-ResNet (Qualcomm KWS) &bull; Lọc nhiễu RNNoise &bull; Web Bluetooth BLE</p>
+        <p class="brand-subtitle">Mô hình SOTA BC-ResNet (Qualcomm KWS) &bull; Chuẩn hóa 2.0s Push-to-Talk &bull; Web Bluetooth BLE</p>
       </div>
       <div class="header-status">
         <div class="status-pill" id="status-model">
@@ -44,22 +44,18 @@
         <!-- CARD 1: CONTROL BAR -->
         <div class="card control-bar-card">
           <div class="control-actions">
-            <button id="btn-toggle-mic" class="btn btn-primary" disabled>
+            <button id="btn-ptt-mic" class="btn btn-primary btn-ptt" disabled>
               <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-              <span>Bật Microphone</span>
+              <span id="ptt-text">🎙️ ẤN GIỮ ĐỂ NÓI (THẢ ĐỂ GỬI LỆNH)</span>
             </button>
             <button id="btn-connect-ble" class="btn btn-secondary">
               <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14.88 16.29L13 18.17V14.41l1.88 1.88M13 5.83l1.88 1.88L13 9.59V5.83M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4zm-2.83 8.58L13 18.17v-3.76l1.88 1.88z"/></svg>
               <span>📡 Kết nối Xe Robot</span>
             </button>
           </div>
-          <div class="denoise-toggle-wrapper">
-            <label class="switch-label" for="toggle-denoise">
-              <input type="checkbox" id="toggle-denoise" checked>
-              <span class="slider"></span>
-              <span class="label-text">Lọc nhiễu RNNoise AI</span>
-            </label>
-            <span class="badge badge-green">LATENCY: ~5.5ms</span>
+          <div class="ptt-hint-bar">
+            <span class="badge badge-cyan">CƠ CHẾ: PUSH-TO-TALK 2.0S CHUẨN HÓA</span>
+            <span class="ptt-subhint">📱 Ấn giữ nút khi nói &bull; 💻 Hoặc giữ phím Spacebar</span>
           </div>
         </div>
 
@@ -86,17 +82,16 @@
           
           <div class="audio-metrics">
             <div class="metric-item">
-              <span class="metric-label">Năng lượng RMS:</span>
-              <span class="metric-val" id="val-rms">-60 dB</span>
+              <span class="metric-label">Thời lượng thu:</span>
+              <span class="metric-val" id="val-rec-duration">0.00 s</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Cơ chế nhận diện:</span>
-              <span class="metric-val" style="color: #00f2fe; font-weight: 700;">VAD-Gated Căn Giữa</span>
+              <span class="metric-label">Biên độ đỉnh (Peak):</span>
+              <span class="metric-val" id="val-rec-peak">0.00</span>
             </div>
-            <div class="metric-item vad-slider-item">
-              <span class="metric-label">Ngưỡng VAD:</span>
-              <input type="range" id="slider-vad" min="-55" max="-25" step="1" value="-42" title="Kéo để chỉnh độ nhạy micro">
-              <span class="metric-val" id="val-vad-threshold">-42 dB</span>
+            <div class="metric-item">
+              <span class="metric-label">Cân đều 2.0s:</span>
+              <span class="metric-val" style="color: #00f2fe; font-weight: 700;">Peak 0.75 &bull; Center-Pad</span>
             </div>
           </div>
         </div>
@@ -201,9 +196,9 @@
   </div>
 
   <!-- SCRIPTS -->
-  <script src="audio_engine.js?v=2.3"></script>
-  <script src="digital_twin.js?v=2.3"></script>
-  <script src="ble_controller.js?v=2.3"></script>
-  <script src="app.js?v=2.3"></script>
+  <script src="audio_engine.js?v=3.0"></script>
+  <script src="digital_twin.js?v=3.0"></script>
+  <script src="ble_controller.js?v=3.0"></script>
+  <script src="app.js?v=3.0"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 // ==========================================================================
-// AUDIO ENGINE: Web Audio API + VAD-Gated Speech Center-Padding (16kHz)
-// Generates exact [1, 1, 128, 63] tensors matching PyTorch torchaudio 100%
+// AUDIO ENGINE: Web Audio API (16kHz) + Push-to-Talk + Peak Normalization + Center-Pad 2.0s
+// Generates exact [1, 1, 128, 63] tensors matching PyTorch training 100%
 // ==========================================================================
 
 class AudioEngine {
@@ -18,44 +18,27 @@ class AudioEngine {
     this.audioCtx = null;
     this.mediaStream = null;
     this.processorNode = null;
-    this.isRecording = false;
-    this.denoiseEnabled = true;
+    this.isRecording = false; // Is active recording session (holding button)
+    this.isMicOpen = false;    // Is mic hardware opened
 
-    // 32,000 samples Ring Buffer (2.0s) for continuous live monitoring & visualizers
-    this.ringBuffer = new Float32Array(this.targetSamples);
-    this.ringWritePos = 0;
+    // Accumulator for current push-to-talk speech
+    this.recordedChunks = [];
+    this.recordedSamplesCount = 0;
 
-    // Rolling Spectrogram for Visualization (128 x 150)
+    // Display buffer (32,000 samples) for waveform & spectrogram
+    this.displayBuffer = new Float32Array(this.targetSamples);
+    this.displayWritePos = 0;
+
+    // Rolling Spectrogram for Visualization (128 x 100)
     this.rollingSpec = [];
     this.maxRollingFrames = 100;
 
-    // VAD & Real-Time Endpointing Engine
+    this.currentPeak = 0.0;
     this.currentRmsDb = -60.0;
-    this.isVoiceDetected = false;
-    this.vadThresholdDb = -42.0; // Default voice threshold in dB (configurable)
-    this.vadState = "IDLE"; // 'IDLE' | 'RECORDING' | 'PROCESSING'
-
-    // Pre-roll buffer (300ms = 4800 samples) to preserve initial speech consonants ('T', 'Kh', 'R'...)
-    this.preRollSize = Math.round(this.sampleRate * 0.30);
-    this.preRollBuffer = new Float32Array(this.preRollSize);
-    this.preRollPos = 0;
-
-    // Utterance accumulation
-    this.recordedSpeechChunks = [];
-    this.recordedSpeechLength = 0;
-    this.silenceSamplesCount = 0;
-    this.minSpeechSamples = Math.round(this.sampleRate * 0.25); // At least 250ms of speech (4000 samples)
-    this.maxSpeechSamples = Math.round(this.sampleRate * 1.80); // Safety limit 1.8s
-    this.silenceHangoverSamples = Math.round(this.sampleRate * 0.35); // 350ms silence to finalize speech
-
-    // Callbacks
-    this.onUtteranceComplete = null; // (melFlatTensor, centeredAudio, durationMs) => {}
-    this.onVadStateChange = null; // (state: string, rmsDb: number) => {}
   }
 
   async initMic() {
-    if (this.isRecording) return true;
-
+    if (this.isMicOpen) return true;
     try {
       this.audioCtx = new (window.AudioContext || window.webkitAudioContext)({
         sampleRate: this.sampleRate
@@ -66,27 +49,23 @@ class AudioEngine {
           channelCount: 1,
           echoCancellation: false,
           noiseSuppression: false,
-          autoGainControl: false
+          autoGainControl: true // Hardware AGC helps mobile mics reach healthy input levels
         }
       });
 
       const sourceNode = this.audioCtx.createMediaStreamSource(this.mediaStream);
-
-      // ScriptProcessor for universal browser compatibility (iOS Safari, Android Chrome, Mac, Windows)
       const bufferSize = 2048;
       this.processorNode = this.audioCtx.createScriptProcessor(bufferSize, 1, 1);
 
       this.processorNode.onaudioprocess = (e) => {
-        if (!this.isRecording) return;
         const inputData = e.inputBuffer.getChannelData(0);
-        this.processAudioBlock(inputData, e.inputBuffer.sampleRate);
+        this.processIncomingBlock(inputData, e.inputBuffer.sampleRate);
       };
 
       sourceNode.connect(this.processorNode);
       this.processorNode.connect(this.audioCtx.destination);
 
-      this.isRecording = true;
-      this.vadState = "IDLE";
+      this.isMicOpen = true;
       return true;
     } catch (err) {
       console.error("[AUDIO ERR] Không thể mở microphone:", err);
@@ -94,155 +73,124 @@ class AudioEngine {
     }
   }
 
-  stopMic() {
-    if (this.processorNode) {
-      this.processorNode.disconnect();
-      this.processorNode = null;
-    }
-    if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach((track) => track.stop());
-      this.mediaStream = null;
-    }
-    if (this.audioCtx) {
-      this.audioCtx.close();
-      this.audioCtx = null;
-    }
-    this.isRecording = false;
-    this.vadState = "IDLE";
+  // Push-to-Talk: Start collecting speech
+  startRecording() {
+    this.recordedChunks = [];
+    this.recordedSamplesCount = 0;
+    this.isRecording = true;
   }
 
-  // Push samples into circular buffer with linear resampling if needed
-  processAudioBlock(rawChunk, nativeSr) {
+  // Push-to-Talk: Stop collecting, normalize, center-pad & extract Mel Spectrogram
+  stopRecordingAndProcess() {
+    this.isRecording = false;
+
+    if (this.recordedChunks.length === 0 || this.recordedSamplesCount < 2400) {
+      // Too short (< 0.15s)
+      return null;
+    }
+
+    // 1. Merge all chunks into single Float32Array
+    const rawAudio = new Float32Array(this.recordedSamplesCount);
+    let offset = 0;
+    for (const chunk of this.recordedChunks) {
+      rawAudio.set(chunk, offset);
+      offset += chunk.length;
+    }
+    this.recordedChunks = [];
+    this.recordedSamplesCount = 0;
+
+    const durationSec = rawAudio.length / this.sampleRate;
+
+    // 2. Soft trim silence at start and end
+    let startIdx = 0;
+    let endIdx = rawAudio.length - 1;
+    const trimThreshold = 0.015;
+
+    while (startIdx < endIdx && Math.abs(rawAudio[startIdx]) < trimThreshold) {
+      startIdx++;
+    }
+    while (endIdx > startIdx && Math.abs(rawAudio[endIdx]) < trimThreshold) {
+      endIdx--;
+    }
+
+    // Retain 80ms safety margin around trimmed speech
+    const margin = Math.round(this.sampleRate * 0.08);
+    startIdx = Math.max(0, startIdx - margin);
+    endIdx = Math.min(rawAudio.length - 1, endIdx + margin);
+
+    const trimmed = rawAudio.subarray(startIdx, endIdx + 1);
+
+    // 3. Peak Normalization to 0.75 (Exact match to Data_MT training distribution!)
+    let maxPeak = 0;
+    for (let i = 0; i < trimmed.length; i++) {
+      const v = Math.abs(trimmed[i]);
+      if (v > maxPeak) maxPeak = v;
+    }
+
+    const normalized = new Float32Array(trimmed.length);
+    let finalPeak = maxPeak;
+    if (maxPeak > 0.005) {
+      const gain = Math.min(0.75 / maxPeak, 15.0);
+      for (let i = 0; i < trimmed.length; i++) {
+        normalized[i] = trimmed[i] * gain;
+      }
+      finalPeak = maxPeak * gain;
+    } else {
+      normalized.set(trimmed);
+    }
+
+    // 4. Exact Center-Padding into 32,000 samples (2.0s) matching preprocess_offline.py
+    const centeredAudio = new Float32Array(this.targetSamples);
+    if (normalized.length < this.targetSamples) {
+      const padTotal = this.targetSamples - normalized.length;
+      const padLeft = Math.floor(padTotal / 2);
+      centeredAudio.set(normalized, padLeft);
+    } else {
+      const start = Math.floor((normalized.length - this.targetSamples) / 2);
+      centeredAudio.set(normalized.subarray(start, start + this.targetSamples), 0);
+    }
+
+    // 5. Update displayBuffer with the centered audio so waveform visualizer displays exact 2.0s input!
+    this.displayBuffer.set(centeredAudio);
+
+    // 6. Extract exact [1, 1, 128, 63] Log-Mel Spectrogram
+    const melTensor = this.extractMelSpectrogram(centeredAudio);
+
+    return {
+      melTensor,
+      centeredAudio,
+      durationSec,
+      maxPeak,
+      finalPeak
+    };
+  }
+
+  processIncomingBlock(rawChunk, nativeSr) {
     let chunk = rawChunk;
     if (nativeSr !== this.sampleRate) {
       chunk = this.resampleLinear(rawChunk, nativeSr, this.sampleRate);
     }
 
-    // Measure RMS (dB) on incoming audio
+    // Measure live metrics
+    let maxP = 0;
     let sumSq = 0;
     for (let i = 0; i < chunk.length; i++) {
+      const absV = Math.abs(chunk[i]);
+      if (absV > maxP) maxP = absV;
       sumSq += chunk[i] * chunk[i];
     }
+    this.currentPeak = maxP;
     const rms = Math.sqrt(sumSq / Math.max(chunk.length, 1));
     this.currentRmsDb = 20 * Math.log10(Math.max(rms, 1e-5));
-    const isAboveThreshold = (this.currentRmsDb > this.vadThresholdDb);
-    this.isVoiceDetected = isAboveThreshold;
 
-    // Push into ring buffer for live waveform & rolling spectrogram display
-    for (let i = 0; i < chunk.length; i++) {
-      this.ringBuffer[this.ringWritePos] = chunk[i];
-      this.ringWritePos = (this.ringWritePos + 1) % this.targetSamples;
-    }
+    // If recording: accumulate audio and update live display
+    if (this.isRecording) {
+      this.recordedChunks.push(new Float32Array(chunk));
+      this.recordedSamplesCount += chunk.length;
 
-    // Push latest column for live rolling spectrogram rendering
-    if (this.isRecording && this.ringWritePos % 512 === 0) {
-      this.updateLiveSpectrogramColumn();
-    }
-
-    // VAD Speech Collector & Endpointing Engine
-    this.handleVadChunk(chunk, isAboveThreshold);
-  }
-
-  handleVadChunk(chunk, isAboveThreshold) {
-    if (this.vadState === "IDLE") {
-      // Maintain circular pre-roll buffer in silence
       for (let i = 0; i < chunk.length; i++) {
-        this.preRollBuffer[this.preRollPos] = chunk[i];
-        this.preRollPos = (this.preRollPos + 1) % this.preRollSize;
-      }
-
-      if (isAboveThreshold) {
-        // Voice onset detected!
-        this.vadState = "RECORDING";
-        this.silenceSamplesCount = 0;
-
-        // Extract ordered pre-roll audio (300ms before onset)
-        const preRoll = new Float32Array(this.preRollSize);
-        const part1Len = this.preRollSize - this.preRollPos;
-        preRoll.set(this.preRollBuffer.subarray(this.preRollPos), 0);
-        preRoll.set(this.preRollBuffer.subarray(0, this.preRollPos), part1Len);
-
-        this.recordedSpeechChunks = [preRoll, new Float32Array(chunk)];
-        this.recordedSpeechLength = this.preRollSize + chunk.length;
-
-        if (this.onVadStateChange) {
-          this.onVadStateChange("RECORDING", this.currentRmsDb);
-        }
-      } else {
-        if (this.onVadStateChange) {
-          this.onVadStateChange("IDLE", this.currentRmsDb);
-        }
-      }
-    } else if (this.vadState === "RECORDING") {
-      // Accumulate audio during speech
-      this.recordedSpeechChunks.push(new Float32Array(chunk));
-      this.recordedSpeechLength += chunk.length;
-
-      if (!isAboveThreshold) {
-        this.silenceSamplesCount += chunk.length;
-      } else {
-        this.silenceSamplesCount = 0;
-      }
-
-      const silenceReached = (this.silenceSamplesCount >= this.silenceHangoverSamples);
-      const maxReached = (this.recordedSpeechLength >= this.maxSpeechSamples);
-
-      if (silenceReached || maxReached) {
-        this.vadState = "PROCESSING";
-        if (this.onVadStateChange) {
-          this.onVadStateChange("PROCESSING", this.currentRmsDb);
-        }
-
-        // Merge accumulated chunks
-        const speech = new Float32Array(this.recordedSpeechLength);
-        let offset = 0;
-        for (const c of this.recordedSpeechChunks) {
-          speech.set(c, offset);
-          offset += c.length;
-        }
-
-        // Reset buffer
-        this.recordedSpeechChunks = [];
-        this.recordedSpeechLength = 0;
-        this.silenceSamplesCount = 0;
-
-        // Check if duration is meaningful (>= minSpeechSamples + preRollSize)
-        if (speech.length >= this.minSpeechSamples + this.preRollSize) {
-          let effectiveSpeech = speech;
-          // Trim the trailing hangover silence
-          if (silenceReached && speech.length > this.silenceHangoverSamples) {
-            const trimTail = Math.floor(this.silenceHangoverSamples * 0.7);
-            effectiveSpeech = speech.subarray(0, speech.length - trimTail);
-          }
-
-          // CENTER-PAD INTO 32,000 SAMPLES (2.0s) EXACTLY MATCHING PREPROCESS_OFFLINE.PY
-          const centeredAudio = new Float32Array(this.targetSamples);
-          if (effectiveSpeech.length < this.targetSamples) {
-            const padTotal = this.targetSamples - effectiveSpeech.length;
-            const padLeft = Math.floor(padTotal / 2);
-            centeredAudio.set(effectiveSpeech, padLeft);
-          } else {
-            const start = Math.floor((effectiveSpeech.length - this.targetSamples) / 2);
-            centeredAudio.set(effectiveSpeech.subarray(start, start + this.targetSamples), 0);
-          }
-
-          // Extract exact Log-Mel Spectrogram [1, 1, 128, 63]
-          const melTensor = this.extractMelSpectrogram(centeredAudio);
-          const durationMs = (effectiveSpeech.length / this.sampleRate) * 1000;
-
-          if (this.onUtteranceComplete) {
-            this.onUtteranceComplete(melTensor, centeredAudio, durationMs);
-          }
-        }
-
-        this.vadState = "IDLE";
-        if (this.onVadStateChange) {
-          this.onVadStateChange("IDLE", this.currentRmsDb);
-        }
-      } else {
-        if (this.onVadStateChange) {
-          this.onVadStateChange("RECORDING", this.currentRmsDb);
-        }
+        this.displayBuffer[this.displayWritePos] = chunk[i];
+        this.displayWritePos = (this.displayWritePos + 1) % this.targetSamples;
       }
     }
   }
@@ -262,28 +210,16 @@ class AudioEngine {
     return output;
   }
 
-  // Extract ordered 32,000 samples from circular buffer
-  getLatestAudioBuffer() {
-    const output = new Float32Array(this.targetSamples);
-    const part1Len = this.targetSamples - this.ringWritePos;
-    output.set(this.ringBuffer.subarray(this.ringWritePos), 0);
-    output.set(this.ringBuffer.subarray(0, this.ringWritePos), part1Len);
-    return output;
-  }
-
   // Compute exact [1, 1, 128, 63] Log-Mel Spectrogram matching PyTorch torchaudio 100%
-  extractMelSpectrogram(customAudio = null) {
-    const audio = customAudio || this.getLatestAudioBuffer();
-    // Center padding: 512 at each end (1024 // 2) matching torchaudio
+  extractMelSpectrogram(audio) {
     const padLen = this.nFft / 2;
     const paddedAudio = new Float32Array(audio.length + this.nFft);
     paddedAudio.set(audio, padLen);
 
-    const numFrames = 63; // Math.floor((32000 - 1024) / 512) + 1 with padding
+    const numFrames = 63;
     const numMels = this.nMels; // 128
     const numFreqs = (this.nFft / 2) + 1; // 513
 
-    // Matrix [128, 63]
     const melEnergies = [];
     for (let m = 0; m < numMels; m++) {
       melEnergies.push(new Float32Array(numFrames));
@@ -297,24 +233,18 @@ class AudioEngine {
     for (let t = 0; t < numFrames; t++) {
       const start = t * this.hopLength;
 
-      // Windowing
       for (let i = 0; i < this.nFft; i++) {
         frameSignal[i] = paddedAudio[start + i] * this.hannWindow[i];
         fftReal[i] = frameSignal[i];
         fftImag[i] = 0;
       }
 
-      // Fast Real FFT (Cooley-Tukey Radix-2)
       this.fft(fftReal, fftImag);
 
-      // Power Spectrum: |FFT|^2
       for (let f = 0; f < numFreqs; f++) {
-        const r = fftReal[f];
-        const im = fftImag[f];
-        powerSpectrum[f] = r * r + im * im;
+        powerSpectrum[f] = fftReal[f] * fftReal[f] + fftImag[f] * fftImag[f];
       }
 
-      // Mel Filterbank dot-product
       for (let m = 0; m < numMels; m++) {
         let sum = 0;
         const row = this.melFilterbank[m];
@@ -325,7 +255,6 @@ class AudioEngine {
       }
     }
 
-    // Convert to dB: 10 * log10(max(x, 1e-10)), top_db = 80.0
     let maxDb = -Infinity;
     for (let m = 0; m < numMels; m++) {
       for (let t = 0; t < numFrames; t++) {
@@ -336,7 +265,6 @@ class AudioEngine {
     }
 
     const minDb = maxDb - this.topDb;
-    // Flat 1D Float32Array for ONNX Tensor [1, 1, 128, 63]
     const flatTensor = new Float32Array(1 * 1 * numMels * numFrames);
     let idx = 0;
     for (let m = 0; m < numMels; m++) {
@@ -345,50 +273,17 @@ class AudioEngine {
       }
     }
 
-    return flatTensor;
-  }
-
-  // Live Spectrogram Column updater for rolling visualizer
-  updateLiveSpectrogramColumn() {
-    const audio = this.getLatestAudioBuffer();
-    const frameSignal = new Float32Array(this.nFft);
-    const fftReal = new Float32Array(this.nFft);
-    const fftImag = new Float32Array(this.nFft);
-    const powerSpectrum = new Float32Array(this.nFft / 2 + 1);
-
-    const start = Math.max(0, audio.length - this.nFft);
-    for (let i = 0; i < this.nFft; i++) {
-      frameSignal[i] = audio[start + i] * this.hannWindow[i];
-      fftReal[i] = frameSignal[i];
-      fftImag[i] = 0;
-    }
-    this.fft(fftReal, fftImag);
-    for (let f = 0; f < powerSpectrum.length; f++) {
-      powerSpectrum[f] = fftReal[f] * fftReal[f] + fftImag[f] * fftImag[f];
-    }
-
-    const col = new Float32Array(this.nMels);
-    let maxEnergy = 1e-10;
-    for (let m = 0; m < this.nMels; m++) {
-      let sum = 0;
-      const row = this.melFilterbank[m];
-      for (let f = 0; f < powerSpectrum.length; f++) {
-        sum += powerSpectrum[f] * row[f];
+    // Push latest spectrogram for rolling view
+    this.rollingSpec = [];
+    for (let t = 0; t < numFrames; t++) {
+      const col = new Float32Array(numMels);
+      for (let m = 0; m < numMels; m++) {
+        col[m] = (melEnergies[m][t] - minDb) / this.topDb;
       }
-      col[m] = sum;
-      if (sum > maxEnergy) maxEnergy = sum;
+      this.rollingSpec.push(col);
     }
 
-    const normCol = new Float32Array(this.nMels);
-    for (let m = 0; m < this.nMels; m++) {
-      const db = 10 * Math.log10(Math.max(col[m], 1e-10));
-      normCol[m] = Math.max(0, Math.min(1, (db + 60) / 60));
-    }
-
-    this.rollingSpec.push(normCol);
-    if (this.rollingSpec.length > this.maxRollingFrames) {
-      this.rollingSpec.shift();
-    }
+    return flatTensor;
   }
 
   // Fast In-Place Cooley-Tukey Radix-2 FFT (N = 1024)
@@ -450,24 +345,16 @@ class AudioEngine {
     ctx.lineTo(width, height / 2);
     ctx.stroke();
 
-    if (!this.isRecording) {
-      ctx.fillStyle = '#64748b';
-      ctx.font = '12px JetBrains Mono';
-      ctx.textAlign = 'center';
-      ctx.fillText('Microphone đang tắt. Bấm [Bật Microphone] để bắt đầu', width / 2, height / 2 + 4);
-      return;
-    }
-
-    const audio = this.getLatestAudioBuffer();
+    const audio = this.displayBuffer;
     const step = Math.ceil(audio.length / width);
     const ampScale = (height / 2) * 0.9;
 
-    if (this.vadState === 'RECORDING') {
-      ctx.strokeStyle = '#f59e0b'; // Amber when speaking
-      ctx.lineWidth = 2.0;
+    if (this.isRecording) {
+      ctx.strokeStyle = '#ef4444'; // Red glowing when holding down / recording
+      ctx.lineWidth = 2.2;
     } else {
-      ctx.strokeStyle = '#38bdf8'; // Cyan when listening
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = '#00f2fe'; // Cyan when finished / ready
+      ctx.lineWidth = 1.5;
     }
 
     ctx.beginPath();
@@ -480,7 +367,7 @@ class AudioEngine {
     ctx.stroke();
   }
 
-  // Draw Rolling Mel Spectrogram onto HTML5 Canvas
+  // Draw Log-Mel Spectrogram onto HTML5 Canvas
   renderSpectrogram(canvas) {
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
@@ -491,17 +378,17 @@ class AudioEngine {
       ctx.fillStyle = '#64748b';
       ctx.font = '12px JetBrains Mono';
       ctx.textAlign = 'center';
-      ctx.fillText('Đang chờ dữ liệu phổ Log-Mel Spectrogram...', width / 2, height / 2 + 4);
+      ctx.fillText('Đang chờ khẩu lệnh để tạo phổ Log-Mel Spectrogram [128x63]...', width / 2, height / 2 + 4);
       return;
     }
 
     const numCols = this.rollingSpec.length;
-    const colWidth = width / this.maxRollingFrames;
+    const colWidth = width / numCols;
     const rowHeight = height / this.nMels;
 
     for (let c = 0; c < numCols; c++) {
       const col = this.rollingSpec[c];
-      const x = (width - (numCols - c) * colWidth);
+      const x = c * colWidth;
       for (let m = 0; m < this.nMels; m++) {
         const y = height - (m + 1) * rowHeight;
         const normVal = Math.min(Math.max(col[m], 0), 1);
