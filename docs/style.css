@@ -701,3 +701,44 @@ kbd {
 .footer-info strong, .footer-specs strong {
   color: var(--text-muted);
 }
+
+/* === VAD-GATED ENHANCEMENTS === */
+
+.live-indicator.listening {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.live-indicator.recording {
+  background: rgba(245, 158, 11, 0.25);
+  color: #f59e0b;
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.5);
+  animation: pulse-recording 0.7s infinite alternate;
+}
+
+.live-indicator.processing {
+  background: rgba(16, 185, 129, 0.25);
+  color: var(--neon-green);
+  border-color: var(--neon-green);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.6);
+}
+
+@keyframes pulse-recording {
+  from { opacity: 0.8; transform: scale(0.98); }
+  to { opacity: 1.0; transform: scale(1.02); }
+}
+
+.vad-slider-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vad-slider-item input[type="range"] {
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+  height: 4px;
+  width: 90px;
+}

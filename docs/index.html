@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2.1">
+  <link rel="stylesheet" href="style.css?v=2.3">
   <!-- ONNX Runtime Web via official CDN -->
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 </head>
@@ -90,12 +90,13 @@
               <span class="metric-val" id="val-rms">-60 dB</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Tốc độ mẫu:</span>
-              <span class="metric-val">16,000 Hz</span>
+              <span class="metric-label">Cơ chế nhận diện:</span>
+              <span class="metric-val" style="color: #00f2fe; font-weight: 700;">VAD-Gated Căn Giữa</span>
             </div>
-            <div class="metric-item">
-              <span class="metric-label">Thời lượng buffer:</span>
-              <span class="metric-val">2.0 Giây (32,000 mẫu)</span>
+            <div class="metric-item vad-slider-item">
+              <span class="metric-label">Ngưỡng VAD:</span>
+              <input type="range" id="slider-vad" min="-55" max="-25" step="1" value="-42" title="Kéo để chỉnh độ nhạy micro">
+              <span class="metric-val" id="val-vad-threshold">-42 dB</span>
             </div>
           </div>
         </div>
@@ -200,9 +201,9 @@
   </div>
 
   <!-- SCRIPTS -->
-  <script src="audio_engine.js?v=2.1"></script>
-  <script src="digital_twin.js?v=2.1"></script>
-  <script src="ble_controller.js?v=2.1"></script>
-  <script src="app.js?v=2.1"></script>
+  <script src="audio_engine.js?v=2.3"></script>
+  <script src="digital_twin.js?v=2.3"></script>
+  <script src="ble_controller.js?v=2.3"></script>
+  <script src="app.js?v=2.3"></script>
 </body>
 </html>
