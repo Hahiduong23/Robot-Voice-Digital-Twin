@@ -22,6 +22,7 @@ const vadIndicator = document.getElementById("vad-indicator");
 
 const btnPttMic = document.getElementById("btn-ptt-mic");
 const pttText = document.getElementById("ptt-text");
+const btnPlayback = document.getElementById("btn-playback");
 const btnConnectBle = document.getElementById("btn-connect-ble");
 const btnResetSim = document.getElementById("btn-reset-sim");
 const btnClearLog = document.getElementById("btn-clear-log");
@@ -223,16 +224,19 @@ async function handleStopSpeech() {
   vadIndicator.textContent = "⚡ ĐANG CÂN 2S & NHẬN DIỆN...";
   vadIndicator.className = "live-indicator processing";
 
-  const result = audioEngine.stopRecordingAndProcess();
-
   const micDot = statusMic.querySelector(".status-dot");
   const micText = statusMic.querySelector(".status-text");
   micDot.className = "status-dot online";
+  micText.textContent = "Micro: Đang xử lý...";
+
+  // Await W3C OfflineAudioContext Sinc anti-aliasing resampling & peak normalization
+  const result = await audioEngine.stopRecordingAndProcess();
+
   micText.textContent = "Micro: Chờ lệnh";
 
-  if (!result) {
-    addLog("[CẢNH BÁO] Thời lượng thu quá ngắn (< 0.15s). Vui lòng ấn giữ trong khi nói khẩu lệnh.", "warn");
-    vadIndicator.textContent = "🎙️ SẴN SÀNG THU ÂM";
+  if (!result || result.isTooShort) {
+    addLog("[CẢNH BÁO] Thời lượng ấn giữ quá ngắn (< 0.25s). Vui lòng ấn giữ trong khi nói khẩu lệnh.", "warn");
+    vadIndicator.textContent = "⚠️ QUÁ NGẮN (< 0.25s)";
     vadIndicator.className = "live-indicator";
     pttText.textContent = "🎙️ ẤN GIỮ ĐỂ NÓI (THẢ ĐỂ GỬI LỆNH)";
     return;
@@ -240,7 +244,36 @@ async function handleStopSpeech() {
 
   // Update telemetry metrics
   if (valRecDuration) valRecDuration.textContent = result.durationSec.toFixed(2) + " s";
-  if (valRecPeak) valRecPeak.textContent = result.maxPeak.toFixed(2) + " ➜ " + result.finalPeak.toFixed(2);
+  if (valRecPeak) {
+    const pb = (result.peakBefore !== undefined) ? result.peakBefore.toFixed(2) : "0.00";
+    const pf = (result.finalPeak !== undefined) ? result.finalPeak.toFixed(2) : "0.00";
+    valRecPeak.textContent = pb + " ➜ " + pf;
+  }
+
+  // SILENCE GUARD: User stayed silent while holding the button (peak < 0.025 or rms < 0.003)
+  // Completely eliminates false 'Rẽ Phải' predictions on pure silence!
+  if (result.isSilence) {
+    addLog("[IM LẶNG] Không phát hiện tiếng nói (Đỉnh: " + result.peakBefore.toFixed(3) + ", RMS: " + result.rmsBefore.toFixed(4) + "). Đã bỏ qua suy luận để ngăn chặn dự đoán sai!", "warn");
+    vadIndicator.textContent = "🤫 KHÔNG CÓ TIẾNG NÓI (IM LẶNG)";
+    vadIndicator.className = "live-indicator";
+    pttText.textContent = "🎙️ ẤN GIỮ ĐỂ NÓI (THẢ ĐỂ GỬI LỆNH)";
+
+    // Reset all gauge bars
+    constants.class_names.forEach(cls => {
+      const row = document.getElementById("gauge-" + cls);
+      if (row) {
+        const pctEl = row.querySelector(".gauge-pct");
+        const barEl = row.querySelector(".gauge-bar");
+        pctEl.textContent = "0.0%";
+        barEl.style.width = "0%";
+        row.classList.remove("active");
+      }
+    });
+    return;
+  }
+
+  // Enable audio playback button
+  if (btnPlayback) btnPlayback.disabled = false;
 
   // Run AI Inference
   await runInferenceOnResult(result);
@@ -378,6 +411,16 @@ function softmax(arr) {
 // ==========================================================================
 // EVENT LISTENERS: PUSH-TO-TALK (MOUSE + TOUCH + SPACEBAR)
 // ==========================================================================
+
+// Audio Playback Button: Nghe lại âm thanh AI vừa nhận
+if (btnPlayback) {
+  btnPlayback.addEventListener("click", () => {
+    if (audioEngine) {
+      addLog("[HỆ THỐNG] 🔊 Đang phát lại đúng đoạn 2.0s nạp vào mô hình AI...", "sys");
+      audioEngine.playLastProcessedAudio();
+    }
+  });
+}
 
 // Desktop Mouse Events
 btnPttMic.addEventListener("mousedown", (e) => {
