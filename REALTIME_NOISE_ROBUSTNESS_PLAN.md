@@ -463,8 +463,6 @@ Hệ thống chuyển đổi hoàn toàn từ "quét định kỳ 250ms" sang c�
 
 ---
 
----
-
 ### 8.7. PHÂN TÍCH CHUYÊN SÂU & GIẢI PHÁP TRIỆT ĐỂ: KHẮC PHỤC LỆCH MIỀN DỮ LIỆU IPHONE VOICE MEMOS VS WEB AUDIO API
 
 #### 1. Bối cảnh & Thực nghiệm phát hiện nguyên nhân gốc rễ (Root Cause Analysis):
@@ -504,4 +502,16 @@ Qua phản hồi kiểm thử thực tế và đối soát trực tiếp với d
    * Giữ nguyên thời lượng tự nhiên như cách người dùng ghi âm trên iPhone Voice Memos (người dùng ấn giữ -> nói -> thả nút), sau đó căn đúng vào giữa khung 2.0 s (32,000 mẫu).
 5. **Nút tính năng "🔊 Nghe lại âm AI"**:
    * Cho phép người dùng bấm nghe lại trực tiếp đoạn âm thanh 2.0 s đã chuẩn hóa mà mô hình AI vừa nạp vào, giúp kiểm chứng độ trong trẻo và chuẩn xác của microphone.
+
+---
+
+### 8.8. TỔ CHỨC THƯ MỤC TRIỂN KHAI CUỐI KỲ (`FN/`)
+Toàn bộ mã nguồn, mô hình và công cụ phục vụ giai đoạn Cuối kỳ đã được đóng gói độc lập và chuyên biệt tại thư mục `FN/`:
+* `FN/models.py`: Định nghĩa kiến trúc SOTA `BC_ResNet` (157k tham số) và `M5_SE_VoiceResNet`.
+* `FN/train_bc_resnet.py`: Kịch bản huấn luyện `BC-ResNet` với AdamW, Cosine Annealing và SpecAugment.
+* `FN/export_onnx.py`: Kịch bản xuất file ONNX tự thân sang `FN/results/bc_resnet.onnx` và đồng bộ sang `docs/models/`.
+* `FN/realtime_eval.py`: Bộ giả lập kiểm thử âm học Realtime (Sinc Resampling + Silence Guard + Peak Normalization 0.65).
+* `FN/firmware/esp32_ble_robot.ino`: Mã nguồn vi điều khiển ESP32 nhận lệnh qua Bluetooth Low Energy (BLE).
+* `FN/results/`: Chứa file trọng số `.pth`, file mô hình `.onnx` và biểu đồ học tập `.png`.
+* `FN/README.md`: Cẩm nang hướng dẫn thực thi và kiểm thử chi tiết.
 

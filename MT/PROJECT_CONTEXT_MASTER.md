@@ -2,7 +2,7 @@
 > **Dự án**: Nhận Diện Giọng Nói Điều Khiển Robot Di Động Thời Gian Thực (Real-time Speech Command Recognition for Mobile Robot Control)  
 > **Tác giả & Chủ nhiệm dự án**: Hải Dương  
 > **Ngôn ngữ báo cáo**: Tiếng Anh & Tiếng Việt (Song ngữ)  
-> **Trạng thái**: Hoàn thiện thực nghiệm trên bộ dữ liệu chuẩn 1,400 mẫu (`Data_1400`), hoàn tất báo cáo kỹ thuật `DLPRP.docx` / `DLPRP_VI.docx`.  
+> **Trạng thái**: Hoàn thiện Giữa kỳ (`MT/`, 1,400 mẫu `Data_MT/`, báo cáo `Report/`) và Hoàn thiện Cuối kỳ (`FN/`, SOTA BC-ResNet, Web Digital Twin & ESP32 BLE Robot `docs/`).  
 > **Mục đích tài liệu**: Cung cấp toàn bộ tri thức, cấu trúc thư mục, chi tiết mã nguồn, nhật ký trao đổi và luận cứ kỹ thuật để bất kỳ AI Agent nào khi đọc đều có thể nắm bắt 100% bối cảnh và tiếp tục phát triển ngay lập tức.
 
 ---
@@ -33,47 +33,61 @@
 ```
 /Users/haiduong/Desktop/Deep_Learning/
 │
-├── Data_1400/                        # BỘ DỮ LIỆU CHUẨN DUY NHẤT ĐANG SỬ DỤNG
-│   ├── KhoiDong/                     # 200 file .wav (16kHz, 16-bit Mono PCM)
-│   ├── KhongXacDinh/                 # 200 file .wav (16kHz, 16-bit Mono PCM)
-│   ├── Lui/                          # 200 file .wav (16kHz, 16-bit Mono PCM)
-│   ├── RePhai/                       # 200 file .wav (16kHz, 16-bit Mono PCM)
-│   ├── ReTrai/                       # 200 file .wav (16kHz, 16-bit Mono PCM)
-│   ├── TamDung/                      # 200 file .wav (16kHz, 16-bit Mono PCM)
-│   └── Tien/                         # 200 file .wav (16kHz, 16-bit Mono PCM)
-│   # TỔNG CỘNG: Đúng 1,400 file, cân bằng hoàn hảo 200 mẫu/lớp, 100% unique (0 duplicate)
+├── Data_MT/                          # BỘ DỮ LIỆU CHUẨN DUY NHẤT (1,400 file WAV 16kHz mono)
+│   ├── KhoiDong/ (200)               # Khẩu lệnh Khởi động
+│   ├── KhongXacDinh/ (200)           # Tạp âm môi trường / Ngoài luồng
+│   ├── Lui/ (200)                    # Khẩu lệnh Lùi
+│   ├── RePhai/ (200)                 # Khẩu lệnh Rẽ Phải
+│   ├── ReTrai/ (200)                 # Khẩu lệnh Rẽ Trái
+│   ├── TamDung/ (200)                # Khẩu lệnh Tạm Dừng / Dừng khẩn cấp
+│   └── Tien/ (200)                   # Khẩu lệnh Tiến
 │
-├── Data_DL/                          # Dữ liệu gốc đợt 1 (700 file .wav, 100 mẫu/lớp)
-├── Data_50/                          # Dữ liệu thu âm bổ sung đợt 2 (350 file .m4a Voice Memos)
-├── Data50+2/                         # Dữ liệu thu âm bổ sung đợt 3 (350 file .m4a Voice Memos)
-│   # (Ba folder trên đã được hợp nhất và chuẩn hóa sạch sẽ vào Data_1400)
+├── MT/                               # [GIAI ĐOẠN GIỮA KỲ]: Nghiên cứu & Huấn luyện From-Scratch
+│   ├── preprocess_offline.py         # Tiền xử lý Log-Mel Spectrogram & tuần tự hóa .pt
+│   ├── train_ablation.py             # Kịch bản thực nghiệm huấn luyện M1-M5, Optimizers, Visualization
+│   ├── models.py                     # Định nghĩa kiến trúc M1 -> M5 (from scratch) & BC-ResNet
+│   ├── utils.py                      # FLOPs, Latency profiling, Grad-CAM engine
+│   ├── dataset.py                    # PyTorch Dataset & SpecAugment (p=0.8)
+│   ├── dataset_processed.pt          # Tensor dữ liệu đã xử lý sẵn (Train 1120, Val 140, Test 140)
+│   ├── results/                      # Checkpoints tốt nhất & biểu đồ khoa học Giữa kỳ (300 DPI)
+│   │   ├── M5_SE_VoiceResNet_AdamW.pth # Trọng số checkpoint mô hình M5 tốt nhất (~1.27 MB)
+│   │   ├── confusion_matrix_M5.png   # Ma trận nhầm lẫn M5 trên 140 mẫu test
+│   │   ├── optimizer_comparison.png  # Đồ thị hội tụ Loss/Accuracy 4 bộ tối ưu
+│   │   └── pareto_tradeoff.png       # Đồ thị Pareto (Latency vs Params vs Acc)
+│   └── END_TO_END_PIPELINE.pptx      # Slide thuyết trình End-to-End Pipeline
 │
-├── ADL/                              # THƯ MỤC CHỨA TOÀN BỘ MÃ NGUỒN PIPELINE
-│   ├── preprocess_offline.py         # Kịch bản tiền xử lý Log-Mel Spectrogram & tuần tự hóa (.pt)
-│   ├── train_ablation.py                      # Kịch bản thực nghiệm huấn luyện: M1-M5, Optimizers, Visualization
-│   ├── dataset_processed.pt          # Tensor dữ liệu đã xử lý sẵn (43.08 MB: Train 1120, Val 140, Test 140)
-│   │
-│   ├── results/                      # KẾT QUẢ THỰC NGHIỆM ĐÃ TẠO MỚI CHO DATA_1400
-│   │   ├── M5_SE_VoiceResNet_AdamW.pth  # Trọng số checkpoint mô hình M5 tốt nhất (~1.27 MB)
-│   │   ├── waveform_all_classes.png   # Biểu đồ dạng sóng 7 lớp khẩu lệnh
-│   │   ├── waveform_rephai_original.png # Dạng sóng & Mel-spectrogram mẫu RePhai
-│   │   ├── specaugment_demo.png       # Minh họa kỹ thuật Time/Frequency Masking (SpecAugment)
-│   │   ├── optimizer_comparison.png   # Đồ thị hội tụ Loss/Accuracy của 4 bộ tối ưu hóa
-│   │   ├── pareto_tradeoff.png        # Đồ thị đánh đổi Pareto (Độ trễ vs Tham số vs Độ chính xác)
-│   │   ├── confusion_matrix_M5.png    # Ma trận nhầm lẫn M5 trên 140 mẫu test (đạt 20/20 toàn bộ)
-│   │   ├── gradcam_KhoiDong.png       # Bản đồ nhiệt giải thích quyết định lớp KhoiDong
-│   │   ├── gradcam_RePhai.png         # Bản đồ nhiệt giải thích quyết định lớp RePhai
-│   │   └── gradcam_Tien.png           # Bản đồ nhiệt giải thích quyết định lớp Tien
-│   │
-│   ├── DLPRP.docx                    # Bản báo cáo tiếng Anh hoàn chỉnh (định dạng Word chuẩn)
-│   ├── DLPRP_VI.docx                 # Bản báo cáo tiếng Việt hoàn chỉnh (định dạng Word chuẩn)
-│   └── END_TO_END_PIPELINE.pptx      # Slide thuyết trình End-to-End Pipeline hoàn chỉnh
+├── FN/                               # [GIAI ĐOẠN CUỐI KỲ]: Triển khai Thời gian thực SOTA & Robot
+│   ├── README.md                     # Cẩm nang toàn diện giai đoạn Cuối Kỳ
+│   ├── models.py                     # Kiến trúc SOTA BC-ResNet (Qualcomm KWS) & M5 Comparator
+│   ├── train_bc_resnet.py            # Huấn luyện SOTA BC-ResNet (AdamW, Cosine, SpecAugment)
+│   ├── export_onnx.py                # Xuất mô hình ONNX tự thân cho WebAssembly
+│   ├── realtime_eval.py              # Trình giả lập & kiểm thử suy luận Realtime
+│   ├── firmware/
+│   │   └── esp32_ble_robot.ino       # Mã nguồn ESP32 Bluetooth Low Energy điều khiển Xe Robot
+│   └── results/
+│       ├── BC_ResNet_AdamW.pth       # Trọng số mô hình SOTA BC-ResNet (157k params, ~654 KB)
+│       ├── bc_resnet.onnx            # File mô hình ONNX Standalone Web (~617 KB)
+│       └── curves_BC_ResNet_AdamW.png # Đồ thị học tập Loss & Accuracy của BC-ResNet
 │
-├── Bao_cao/DLPRP.docx                # Báo cáo tiếng Anh
-├── Bao_cao/DLPRP_VI.docx             # Báo cáo tiếng Việt
-├── END_TO_END_PIPELINE.pptx          # Slide thuyết trình End-to-End Pipeline tại thư mục gốc
+├── docs/                             # [WEB DIGITAL TWIN]: Triển khai trực tiếp trên GitHub Pages
+│   ├── index.html                    # Giao diện Cyberpunk/Neon Dashboard giám sát thời gian thực
+│   ├── app.js                        # Bộ điều phối chính, ONNX Runtime Web, Push-to-Talk state
+│   ├── audio_engine.js               # Audio Engine: Sinc Resample, Silence Guard, Norm 0.65, Playback
+│   ├── ble_controller.js             # Web Bluetooth API kết nối trực tiếp Xe Robot vật lý
+│   ├── digital_twin.js               # Mô phỏng Sa bàn Robot 2D Digital Twin
+│   ├── audio_constants.json          # Bộ lọc Mel, cửa sổ Hann, danh sách nhãn lệnh
+│   └── models/bc_resnet.onnx         # Mô hình ONNX phục vụ WebAssembly
+│
+├── Report/                           # BÁO CÁO KHOA HỌC & TÀI LIỆU NỘP BÀI
+│   ├── DLPRP.docx                    # Báo cáo kỹ thuật tiếng Anh hoàn chỉnh
+│   ├── DLPRP_VI.docx                 # Báo cáo kỹ thuật tiếng Việt hoàn chỉnh
+│   └── DL_FN.docx / DL_FN.pdf        # Báo cáo tổng kết đồ án
+│
+├── HW/                               # CÁC BÀI TẬP THỰC HÀNH TRƯỚC ĐÓ (CIFAR-100 & Pose Estimation)
 ├── PROJECT_CONTEXT_MASTER.md         # [FILE NÀY] Toàn bộ tài liệu bối cảnh cho AI & Developer
-└── README.md                         # Tài liệu giới thiệu tóm tắt dự án
+├── MIDTERM_WORKFLOW_GUIDE.md         # CẨM NANG QUY TRÌNH 8 BƯỚC BÀI TẬP GIỮA KỲ
+├── REALTIME_NOISE_ROBUSTNESS_PLAN.md # TÀI LIỆU ĐỘT PHÁ TRIỂN KHAI REALTIME VÀ ÂM HỌC
+└── README.md                         # Tài liệu giới thiệu tóm tắt toàn bộ kho lưu trữ
 ```
 
 ---
@@ -271,3 +285,26 @@ Nếu anh Hải Dương hoặc một AI Agent khác tiếp tục thực hiện c
      - `TamDung` -> Ngắt động cơ khẩn cấp.
      - `KhoiDong` -> Bật hệ thống sẵn sàng nhận lệnh.
      - `KhongXacDinh` -> Bỏ qua, duy trì trạng thái an toàn.
+
+---
+
+## 7. GIAI ĐOẠN CUỐI KỲ: TRIỂN KHAI THỜI GIAN THỰC SOTA BC-RESNET & ROBOT DIGITAL TWIN
+
+### 7.1. Chuyển dịch Mô hình sang SOTA BC-ResNet (Qualcomm AI Research)
+* **Lý do chuyển đổi**: Bước sang Cuối kỳ, mục tiêu tối thượng là thời gian thực trên WebAssembly và nhúng. Mô hình M5 (310k params) được nâng cấp lên **BC-ResNet (Broadcasted Residual Network)**:
+  * Tham số giảm từ 310,503 xuống **157,415** (giảm 49.3%).
+  * Độ trễ suy luận giảm xuống **4.71 ms**.
+  * File ONNX WebAssembly chỉ **617 KB**.
+  * Độ chính xác Test Set đạt tuyệt đối **100.00%**.
+
+### 7.2. Giải pháp Đột phá Xử lý Lệch Miền Âm thanh (Acoustic Domain Shift)
+Qua thực nghiệm đối soát giữa dữ liệu thu âm iPhone Voice Memos và Web Audio API, hệ thống đã giải quyết 5 bài toán cốt tử:
+1. **Silence Guard**: Triệt tiêu hiện tượng im lặng bị đoán ra *"Rẽ Phải"* (do logit bias +24.14 trên vector 0).
+2. **Chuẩn hóa biên độ đỉnh (Peak Normalization to 0.65)**: Kéo biên độ micro nhỏ về đúng tâm phân phối $0.630$ của $1,400$ file huấn luyện, phục hồi độ chính xác từ $0.0\%$ lên **$99.2\%$**.
+3. **Bộ hạ tần số lấy mẫu W3C OfflineAudioContext (Hardware Sinc Resampling)**: Hạ mẫu chuẩn từ 44.1k/48k về 16kHz không méo pha.
+4. **Bảo tồn thời lượng tự nhiên**: Giữ trọn vẹn ngữ cảnh phát âm, không chém mất phụ âm đầu, căn giữa chuẩn khung 2.0s.
+5. **Tính năng "🔊 Nghe lại âm AI"**: Minh bạch hóa âm thanh nạp vào mạng nơ-ron.
+
+### 7.3. Triển khai Hệ thống Hai chiều: Web Digital Twin + Physical BLE Robot
+* **Web Digital Twin**: Triển khai tại `docs/` qua GitHub Pages (`https://hahiduong23.github.io/Robot-Voice-Digital-Twin/`).
+* **Xe Robot Vật lý**: Mã nguồn ESP32 tại `FN/firmware/esp32_ble_robot.ino` nhận lệnh qua Web Bluetooth API điều khiển động cơ và còi bíp tức thì.
