@@ -1,5 +1,5 @@
 # =========================================================================
-# FINAL TERM: Train SOTA BC-ResNet (Qualcomm AI Research)
+# FINAL TERM: Train SOTA BC-ResNet (Qualcomm AI Research) on Data_FN (2,800 samples)
 # Optimizer: AdamW (lr=0.001, wd=1e-4) | Scheduler: Cosine Annealing (35 epochs)
 # Augmentation: Google Brain SpecAugment (p=0.8) | Loss: Label Smoothing (0.1)
 # =========================================================================
@@ -19,23 +19,38 @@ from MT.dataset import get_dataloaders
 from FN.models import get_model
 from MT.utils import count_parameters, estimate_flops, measure_latency
 
-def train_bc_resnet(epochs=35, lr=0.001, device='cpu'):
+def train_bc_resnet(epochs=35, lr=0.001, device=None):
+    if device is None:
+        if torch.backends.mps.is_available():
+            device = 'mps'
+        elif torch.cuda.is_available():
+            device = 'cuda'
+        else:
+            device = 'cpu'
+            
     print('=========================================================================')
     print('   GIAI ĐOẠN CUỐI KỲ: HUẤN LUYỆN SOTA BC-RESNET (QUALCOMM KWS)')
+    print('   TẬP DỮ LIỆU ĐỒNG BỘ: Data_FN (2,800 MẪU - 400 MẪU/LỚP)')
+    print(f'   THIẾT BỊ HUẤN LUYỆN: {device.upper()}')
     print('=========================================================================')
 
-    train_loader, val_loader, test_loader, meta = get_dataloaders(batch_size=32, use_specaug=True)
-    model = get_model('BC_ResNet', num_classes=len(meta['class_names'])).to(device)
+    dataset_path = 'FN/dataset_processed_2800.pt'
+    train_loader, val_loader, test_loader, meta = get_dataloaders(dataset_path=dataset_path, batch_size=32, use_specaug=True)
+    model = get_model('BC_ResNet', num_classes=len(meta['class_names']))
+
+    params = count_parameters(model)
+    flops = estimate_flops(model, input_size=(1, 1, 128, 63), device='cpu')
+    latency = measure_latency(model, input_size=(1, 1, 128, 63), device='cpu')
+    
+    # Move model to target device for training
+    model.to(device)
 
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-5)
 
-    params = count_parameters(model)
-    flops = estimate_flops(model, input_size=(1, 1, 128, 63))
-    latency = measure_latency(model, input_size=(1, 1, 128, 63), device=device)
-
     print(f'Mô hình: BC_ResNet | Tham số: {params:,} | FLOPs: {flops:.2f} M | Trễ CPU: {latency:.2f} ms')
+    print(f'Số mẫu: Train={len(train_loader.dataset)}, Val={len(val_loader.dataset)}, Test={len(test_loader.dataset)}')
     print('Bắt đầu huấn luyện...')
 
     history = {
@@ -119,9 +134,9 @@ def train_bc_resnet(epochs=35, lr=0.001, device='cpu'):
     test_acc = (test_correct / test_total) * 100.0
 
     print('=========================================================================')
-    print(f' KẾT QUẢ TEST SET BC-RESNET (QUALCOMM KWS):')
-    print(f' - Best Val Accuracy:  {best_val_acc:.2f}%')
-    print(f' - Test Accuracy:      {test_acc:.2f}% (140/140 mẫu kiểm thử)')
+    print(f' KẾT QUẢ TEST SET BC-RESNET (QUALCOMM KWS) TRÊN Data_FN:')
+    print(f' - Best Val Accuracy:  {best_val_acc:.2f}% (trên 280 mẫu)')
+    print(f' - Test Accuracy:      {test_acc:.2f}% (trên 280 mẫu kiểm thử)')
     print(f' - Test Loss:          {test_loss:.4f}')
     print(f' - Inference Latency:  {latency:.2f} ms')
     print('=========================================================================')
@@ -140,7 +155,8 @@ def train_bc_resnet(epochs=35, lr=0.001, device='cpu'):
         'params': params,
         'flops': flops,
         'latency_ms': latency,
-        'total_train_time_s': total_time
+        'total_train_time_s': total_time,
+        'num_samples': 2800
     }, out_pth)
     print(f'[SUCCESS] Đã lưu checkpoint tại: {out_pth}')
 
@@ -148,7 +164,7 @@ def train_bc_resnet(epochs=35, lr=0.001, device='cpu'):
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
     axes[0].plot(range(1, epochs + 1), history['train_loss'], label='Train Loss', color='#2563eb', lw=2)
     axes[0].plot(range(1, epochs + 1), history['val_loss'], label='Val Loss', color='#dc2626', lw=2)
-    axes[0].set_title('Đường cong Hàm Mất Mát (BC-ResNet AdamW)', fontsize=13, fontweight='bold')
+    axes[0].set_title('Đường cong Hàm Mất Mát (BC-ResNet AdamW - 2,800 Mẫu)', fontsize=13, fontweight='bold')
     axes[0].set_xlabel('Epoch', fontsize=11)
     axes[0].set_ylabel('Loss', fontsize=11)
     axes[0].grid(True, linestyle='--', alpha=0.6)
