@@ -7,8 +7,15 @@ class DigitalTwinArena {
   constructor(canvasId) {
     this.canvas = document.getElementById(canvasId);
     this.ctx = this.canvas.getContext("2d");
-    this.width = this.canvas.width;
-    this.height = this.canvas.height;
+
+    // Dynamic resolution fitting to container
+    this.resizeCanvas();
+    if (window.ResizeObserver) {
+      this.resizeObserver = new ResizeObserver(() => this.resizeCanvas());
+      this.resizeObserver.observe(this.canvas);
+    } else {
+      window.addEventListener("resize", () => this.resizeCanvas());
+    }
 
     // Robot Kinematics (2-Wheel Differential Drive)
     this.x = this.width / 2;
@@ -19,8 +26,9 @@ class DigitalTwinArena {
     this.angularVelocity = 0;
     this.targetAngularVelocity = 0;
 
-    this.robotLength = 52;
-    this.robotWidth = 36;
+    // Compact robot size (scaled down ~25% for optimal proportion on arena)
+    this.robotLength = 38;
+    this.robotWidth = 26;
 
     // Operational State Machine
     // Must trigger "KhoiDong" first before moving. "TamDung" freezes and locks until "KhoiDong" again.
@@ -50,6 +58,27 @@ class DigitalTwinArena {
     // Bind loop
     this.animate = this.animate.bind(this);
     requestAnimationFrame(this.animate);
+  }
+
+  resizeCanvas() {
+    const rect = this.canvas.getBoundingClientRect();
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
+    if (w > 0 && h > 0 && (this.canvas.width !== w || this.canvas.height !== h)) {
+      const oldW = this.width || w;
+      const oldH = this.height || h;
+      this.canvas.width = w;
+      this.canvas.height = h;
+      this.width = w;
+      this.height = h;
+      if (oldW > 0 && oldH > 0 && this.x !== undefined) {
+        this.x = Math.max(30, Math.min(w - 30, (this.x / oldW) * w));
+        this.y = Math.max(30, Math.min(h - 30, (this.y / oldH) * h));
+      }
+    } else if (!this.width || !this.height) {
+      this.width = this.canvas.width || 600;
+      this.height = this.canvas.height || 420;
+    }
   }
 
   reset() {
@@ -240,112 +269,86 @@ class DigitalTwinArena {
     ctx.fillStyle = "#00aeef";
     ctx.fill();
 
-    // 4. Obstacle Target A-1
-    ctx.fillStyle = "rgba(255, 184, 0, 0.2)";
-    ctx.strokeStyle = "#ffb800";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(80, 60, 38, 38, 6);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#ffb800";
-    ctx.font = "bold 11px Montserrat, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("A-1", 99, 79);
-
-    // 5. Goal Target FLAG
-    ctx.fillStyle = "rgba(255, 59, 48, 0.2)";
-    ctx.strokeStyle = "#ff3b30";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(this.width - 110, this.height - 90, 44, 38, 6);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#ff3b30";
-    ctx.font = "bold 11px Montserrat, sans-serif";
-    ctx.fillText("FLAG", this.width - 88, this.height - 71);
-
-    // 6. Breadcrumb Motion Trail
+    // 4. Breadcrumb Motion Trail
     for (let i = 0; i < this.trail.length; i++) {
       const p = this.trail[i];
       const norm = (i + 1) / this.trail.length;
       ctx.fillStyle = "rgba(0, 174, 239, " + (norm * 0.45) + ")";
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 2.5 * norm, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 2.2 * norm, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 7. Render Robot Car (Rich Blueprint / Maker Enclosure)
+    // 5. Render Robot Car (Rich Blueprint / Maker Enclosure - Compact Proportions)
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
 
     // A. Ultrasonic / LiDAR Sensor Radar Beam (Glowing gradient cone)
-    const coneGrad = ctx.createRadialGradient(0, 0, 10, 80, 0, 95);
-    coneGrad.addColorStop(0, "rgba(0, 174, 239, 0.45)");
+    const coneGrad = ctx.createRadialGradient(0, 0, 8, 60, 0, 75);
+    coneGrad.addColorStop(0, "rgba(0, 174, 239, 0.42)");
     coneGrad.addColorStop(1, "rgba(0, 174, 239, 0.0)");
     ctx.fillStyle = coneGrad;
     ctx.beginPath();
-    ctx.moveTo(16, 0);
-    ctx.arc(0, 0, 95, -Math.PI / 5, Math.PI / 5);
+    ctx.moveTo(14, 0);
+    ctx.arc(0, 0, 75, -Math.PI / 5, Math.PI / 5);
     ctx.closePath();
     ctx.fill();
 
     // B. Left DC Wheel (Dark navy with gold rim)
     ctx.fillStyle = "#0a2a46";
     ctx.strokeStyle = "#ffb800";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(-22, -this.robotWidth / 2 - 6, 26, 10, 3);
+    ctx.roundRect(-15, -this.robotWidth / 2 - 4.5, 18, 6.5, 2);
     ctx.fill();
     ctx.stroke();
 
     // C. Right DC Wheel
     ctx.beginPath();
-    ctx.roundRect(-22, this.robotWidth / 2 - 4, 26, 10, 3);
+    ctx.roundRect(-15, this.robotWidth / 2 - 2, 18, 6.5, 2);
     ctx.fill();
     ctx.stroke();
 
     // D. Front Caster Wheel (Metallic swivel)
     ctx.beginPath();
-    ctx.arc(20, 0, 6, 0, Math.PI * 2);
+    ctx.arc(14, 0, 4, 0, Math.PI * 2);
     ctx.fillStyle = "#b0cddb";
     ctx.fill();
     ctx.strokeStyle = "#0a2a46";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
     // E. Wooden Base Plate (Laser-cut plate)
     ctx.fillStyle = "#dfbc8a";
     ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(-this.robotLength / 2, -this.robotWidth / 2, this.robotLength, this.robotWidth, 8);
+    ctx.roundRect(-this.robotLength / 2, -this.robotWidth / 2, this.robotLength, this.robotWidth, 6);
     ctx.fill();
     ctx.stroke();
 
     // F. Top Navy Electronics Enclosure
     ctx.fillStyle = "#0b3860";
     ctx.strokeStyle = (this.state === "TẠM DỪNG") ? "#ff3b30" : "#00aeef";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(-this.robotLength / 2 + 7, -this.robotWidth / 2 + 5, this.robotLength - 14, this.robotWidth - 10, 6);
+    ctx.roundRect(-this.robotLength / 2 + 5, -this.robotWidth / 2 + 4, this.robotLength - 10, this.robotWidth - 8, 4);
     ctx.fill();
     ctx.stroke();
 
     // G. Microcontroller / ESP32 Board
     ctx.fillStyle = "#08223a";
     ctx.strokeStyle = "#ffb800";
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(-12, -9, 20, 18, 3);
+    ctx.roundRect(-8, -6, 14, 12, 2);
     ctx.fill();
     ctx.stroke();
 
     // H. ESP32 Status LED
     ctx.beginPath();
-    ctx.arc(-2, 0, 3.5, 0, Math.PI * 2);
+    ctx.arc(-1, 0, 2.5, 0, Math.PI * 2);
     if (this.isBlinking && (this.blinkTimer % 6 < 3)) {
       ctx.fillStyle = "#10b981"; // Green blink
     } else if (this.state === "TẠM DỪNG") {
@@ -360,9 +363,9 @@ class DigitalTwinArena {
     // I. Heading Arrow (Sharp Gold Pointer)
     ctx.fillStyle = "#ffb800";
     ctx.beginPath();
-    ctx.moveTo(25, 0);
-    ctx.lineTo(16, -6);
-    ctx.lineTo(16, 6);
+    ctx.moveTo(17, 0);
+    ctx.lineTo(10, -5);
+    ctx.lineTo(10, 5);
     ctx.closePath();
     ctx.fill();
 
@@ -374,8 +377,8 @@ class DigitalTwinArena {
 
     ctx.fillStyle = headlightColor;
     ctx.beginPath();
-    ctx.arc(this.robotLength / 2 - 2, -8, 2.5, 0, Math.PI * 2);
-    ctx.arc(this.robotLength / 2 - 2, 8, 2.5, 0, Math.PI * 2);
+    ctx.arc(this.robotLength / 2 - 2, -6, 2, 0, Math.PI * 2);
+    ctx.arc(this.robotLength / 2 - 2, 6, 2, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
