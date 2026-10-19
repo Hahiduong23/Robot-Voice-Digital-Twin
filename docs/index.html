@@ -6,19 +6,20 @@
   <title>Digital Twin Robot Controller | SOTA BC-ResNet (Qualcomm)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3.2">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Montserrat:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=4.0">
   <!-- ONNX Runtime Web via official CDN -->
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 </head>
 <body>
   <div class="app-container">
+    
     <!-- HEADER -->
     <header class="app-header">
       <div class="header-brand">
-        <div class="brand-badge">AI EDGE CYBER-PHYSICAL</div>
-        <h1 class="brand-title">ROBOT DIGITAL TWIN <span>AI VOICE</span></h1>
-        <p class="brand-subtitle">Mô hình SOTA BC-ResNet (Qualcomm KWS) &bull; Chuẩn hóa 2.0s Push-to-Talk &bull; Web Bluetooth BLE</p>
+        <div class="brand-badge">ICSLAB &bull; AI ROBOTICS &bull; CYBER-PHYSICAL SYSTEM</div>
+        <h1 class="brand-title">ROBOT VOICE <span>DIGITAL TWIN</span></h1>
+        <p class="brand-subtitle">Mô hình SOTA BC-ResNet-8 (Qualcomm KWS) &bull; Chuẩn hóa 2.0s Push-to-Talk &bull; Web Bluetooth BLE</p>
       </div>
       <div class="header-status">
         <div class="status-pill" id="status-model">
@@ -36,157 +37,171 @@
       </div>
     </header>
 
-    <!-- MAIN GRID -->
-    <main class="main-grid">
-      <!-- COLUMN LEFT: ACOUSTICS & PREDICTION -->
-      <section class="grid-col left-col">
-        
-        <!-- CARD 1: CONTROL BAR -->
-        <div class="card control-bar-card">
-          <div class="control-actions">
-            <button id="btn-ptt-mic" class="btn btn-primary btn-ptt" disabled>
-              <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-              <span id="ptt-text">🎙️ ẤN GIỮ ĐỂ NÓI (THẢ ĐỂ GỬI LỆNH)</span>
-            </button>
-            <button id="btn-connect-ble" class="btn btn-secondary">
-              <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14.88 16.29L13 18.17V14.41l1.88 1.88M13 5.83l1.88 1.88L13 9.59V5.83M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4zm-2.83 8.58L13 18.17v-3.76l1.88 1.88z"/></svg>
-              <span>📡 Kết nối Xe Robot</span>
-            </button>
-            <button id="btn-playback" class="btn btn-secondary" disabled title="Nghe lại chính xác đoạn âm thanh 2.0s vừa nạp vào mô hình AI">
-              <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-              <span>🔊 Nghe lại âm AI</span>
-            </button>
-          </div>
-          <div class="ptt-hint-bar">
-            <span class="badge badge-cyan">CƠ CHẾ: PUSH-TO-TALK 2.0S CHUẨN HÓA</span>
-            <span class="ptt-subhint">📱 Ấn giữ nút khi nói &bull; 💻 Hoặc giữ phím Spacebar</span>
-          </div>
+    <!-- SECTION 1: TOP CONTROL BAR (STEP 1) -->
+    <section class="card control-hero-card">
+      <div class="control-actions">
+        <div class="step-badge step-yellow">1</div>
+        <button id="btn-ptt-mic" class="btn btn-primary btn-ptt" disabled>
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+          <span id="ptt-text">ẤN GIỮ ĐỂ NÓI (SPACEBAR)</span>
+        </button>
+        <button id="btn-connect-ble" class="btn btn-secondary btn-ble">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14.88 16.29L13 18.17V14.41l1.88 1.88M13 5.83l1.88 1.88L13 9.59V5.83M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4zm-2.83 8.58L13 18.17v-3.76l1.88 1.88z"/></svg>
+          <span>KẾT NỐI XE ROBOT</span>
+        </button>
+        <button id="btn-playback" class="btn btn-secondary btn-playback" disabled title="Nghe lại chính xác đoạn âm thanh 2.0s vừa nạp vào mô hình AI">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+          <span>NGHE LẠI ÂM AI</span>
+        </button>
+      </div>
+
+      <!-- Mark Rober PRO TIP Callout Box -->
+      <div class="pro-tip-box">
+        <div class="pro-tip-flag">◀◀ PRO TIP!</div>
+        <div class="pro-tip-desc">
+          Giữ phím <b>SPACE</b> hoặc ấn nút Mic trong 1-2 giây rồi thả. Bấm <b>I</b> để Khởi Động xe, bấm <b>U</b> để Tạm Dừng khẩn cấp!
         </div>
+      </div>
+    </section>
 
-        <!-- CARD 2: ACOUSTIC MONITOR -->
-        <div class="card visualizer-card">
-          <div class="card-header">
+    <!-- SECTION 2: CENTER STAGE (2D ARENA & SOFTMAX SIDE-BY-SIDE!) -->
+    <section class="center-stage-grid">
+      
+      <!-- CARD 2: SA BÀN MÔ PHỎNG SỐ DIGITAL TWIN (2D ARENA) -->
+      <div class="card arena-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="step-badge">2</div>
             <h2 class="card-title">
-              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h3l3-9 4 18 3-9h7"/></svg>
-              GIÁM SÁT ÂM THANH TRỰC TIẾP (LIVE ACOUSTIC MONITOR)
-            </h2>
-            <div class="live-indicator" id="vad-indicator">VAD: YÊN TĨNH</div>
-          </div>
-          
-          <div class="canvas-container">
-            <div class="canvas-block">
-              <div class="canvas-label">Dạng sóng âm thời gian thực (Waveform)</div>
-              <canvas id="waveform-canvas" width="600" height="100"></canvas>
-            </div>
-            <div class="canvas-block">
-              <div class="canvas-label">Phổ Log-Mel Spectrogram cuộn liên tục (128 Bands)</div>
-              <canvas id="spectrogram-canvas" width="600" height="120"></canvas>
-            </div>
-          </div>
-          
-          <div class="audio-metrics">
-            <div class="metric-item">
-              <span class="metric-label">Thời lượng thu:</span>
-              <span class="metric-val" id="val-rec-duration">0.00 s</span>
-            </div>
-            <div class="metric-item">
-              <span class="metric-label">Biên độ đỉnh (Peak):</span>
-              <span class="metric-val" id="val-rec-peak">0.00</span>
-            </div>
-            <div class="metric-item">
-              <span class="metric-label">Cân đều 2.0s:</span>
-              <span class="metric-val" style="color: #00f2fe; font-weight: 700;">Peak 0.75 &bull; Center-Pad</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- CARD 3: SOFTMAX CONFIDENCE GAUGES -->
-        <div class="card confidence-card">
-          <div class="card-header">
-            <h2 class="card-title">
-              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-              XÁC SUẤT PHÂN LOẠI SOFTMAX (7 NHÃN LỆNH)
-            </h2>
-            <span class="badge badge-purple">SOTA BC-ResNet (Qualcomm)</span>
-          </div>
-
-          <!-- DETECTED COMMAND BANNER -->
-          <div class="detected-banner" id="detected-banner">
-            <div class="banner-icon" id="banner-icon">⏸️</div>
-            <div class="banner-info">
-              <div class="banner-label">LỆNH KÍCH HOẠT GẦN NHẤT:</div>
-              <div class="banner-command" id="banner-command">ĐANG CHỜ KHẨU LỆNH...</div>
-            </div>
-            <div class="banner-conf" id="banner-conf">--%</div>
-          </div>
-
-          <!-- 7 GAUGES -->
-          <div class="gauges-container" id="gauges-container">
-            <!-- Generated dynamically by JS -->
-          </div>
-        </div>
-
-      </section>
-
-      <!-- COLUMN RIGHT: DIGITAL TWIN SIMULATOR & TELEMETRY -->
-      <section class="grid-col right-col">
-        
-        <!-- CARD 4: DIGITAL TWIN SIMULATION ARENA -->
-        <div class="card simulation-card">
-          <div class="card-header">
-            <h2 class="card-title">
-              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
               SA BÀN MÔ PHỎNG SỐ DIGITAL TWIN (2D ARENA)
             </h2>
-            <button class="btn-sm btn-ghost" id="btn-reset-sim">Đặt lại xe</button>
           </div>
+          <button class="btn-sm btn-ghost" id="btn-reset-sim">Đặt lại xe</button>
+        </div>
 
-          <div class="arena-wrapper">
-            <canvas id="arena-canvas" width="600" height="360"></canvas>
-            <div class="arena-hud">
-              <div class="hud-tag">VỊ TRÍ: <span id="hud-pos">(300, 180)</span></div>
-              <div class="hud-tag">GÓC QUAY: <span id="hud-angle">0°</span></div>
-              <div class="hud-tag">TỐC ĐỘ: <span id="hud-speed">0 px/s</span></div>
-              <div class="hud-tag">TRẠNG THÁI: <span id="hud-state" class="state-idle">DỪNG</span></div>
-            </div>
-          </div>
-
-          <div class="manual-keys-hint">
-            <span>🎮 Điều khiển thủ công dự phòng:</span>
-            <kbd>W</kbd> Tiến &bull; <kbd>S</kbd> Lùi &bull; <kbd>A</kbd> Rẽ Trái &bull; <kbd>D</kbd> Rẽ Phải &bull; <kbd>Space</kbd> Dừng
+        <div class="arena-wrapper">
+          <canvas id="arena-canvas" width="600" height="360"></canvas>
+          <div class="arena-hud">
+            <div class="hud-tag">VỊ TRÍ: <span id="hud-pos">(300, 180)</span></div>
+            <div class="hud-tag">GÓC QUAY: <span id="hud-angle">0°</span></div>
+            <div class="hud-tag">TỐC ĐỘ: <span id="hud-speed">0 px/s</span></div>
+            <div class="hud-tag">TRẠNG THÁI: <span id="hud-state" class="state-standby">CHỜ KHỞI ĐỘNG</span></div>
           </div>
         </div>
 
-        <!-- CARD 5: HARDWARE BLE TELEMETRY -->
-        <div class="card telemetry-card">
-          <div class="card-header">
+        <div class="manual-keys-hint">
+          <span>🎮 Điều khiển dự phòng:</span>
+          <kbd>I</kbd> Khởi Động &bull; <kbd>U</kbd> Tạm Dừng &bull; <kbd>W</kbd> Tiến &bull; <kbd>S</kbd> Lùi &bull; <kbd>A</kbd> Trái &bull; <kbd>D</kbd> Phải &bull; <kbd>Space</kbd> Nói
+        </div>
+      </div>
+
+      <!-- CARD 3: XÁC SUẤT PHÂN LOẠI SOFTMAX (7 NHÃN LỆNH) (Placed directly next to Arena!) -->
+      <div class="card confidence-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="step-badge step-cyan">3</div>
             <h2 class="card-title">
-              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              XÁC SUẤT PHÂN LOẠI SOFTMAX (7 NHÃN LỆNH)
+            </h2>
+          </div>
+          <span class="badge badge-purple">SOTA BC-ResNet-8</span>
+        </div>
+
+        <!-- DETECTED COMMAND BANNER -->
+        <div class="detected-banner" id="detected-banner">
+          <div class="banner-icon" id="banner-icon">⏸️</div>
+          <div class="banner-info">
+            <div class="banner-label">LỆNH KÍCH HOẠT GẦN NHẤT:</div>
+            <div class="banner-command" id="banner-command">ĐANG CHỜ KHẨU LỆNH...</div>
+          </div>
+          <div class="banner-conf" id="banner-conf">--%</div>
+        </div>
+
+        <!-- 7 GAUGES -->
+        <div class="gauges-container" id="gauges-container">
+          <!-- Generated dynamically by JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION 3: BOTTOM ROW (ACOUSTIC MONITOR & HARDWARE BLE TELEMETRY) -->
+    <section class="bottom-stage-grid">
+      
+      <!-- CARD 4: LIVE ACOUSTIC MONITOR -->
+      <div class="card visualizer-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="step-badge">4</div>
+            <h2 class="card-title">
+              GIÁM SÁT ÂM THANH TRỰC TIẾP (ACOUSTIC MONITOR)
+            </h2>
+          </div>
+          <div class="live-indicator" id="vad-indicator">VAD: SẴN SÀNG</div>
+        </div>
+        
+        <div class="canvas-container">
+          <div class="canvas-block">
+            <div class="canvas-label">Dạng sóng âm thời gian thực 16kHz (Waveform) &bull; Chuẩn hóa 2.0s</div>
+            <canvas id="waveform-canvas" width="600" height="95"></canvas>
+          </div>
+          <div class="canvas-block">
+            <div class="canvas-label">Phổ Log-Mel Spectrogram cuộn liên tục (128 Bands x 63 Frames)</div>
+            <canvas id="spectrogram-canvas" width="600" height="105"></canvas>
+          </div>
+        </div>
+        
+        <div class="audio-metrics">
+          <div class="metric-item">
+            <span class="metric-label">Thời lượng thu:</span>
+            <span class="metric-val" id="val-rec-duration">0.00 s</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Biên độ đỉnh (Peak):</span>
+            <span class="metric-val" id="val-rec-peak">0.00</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Mức năng lượng RMS:</span>
+            <span class="metric-val" id="val-rms">-60.0 dB</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Cân đều 2.0s:</span>
+            <span class="metric-val" style="color: #00f2fe; font-weight: 700;">Peak 0.75 &bull; Center</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 5: HARDWARE BLE TELEMETRY -->
+      <div class="card telemetry-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="step-badge">5</div>
+            <h2 class="card-title">
               NHẬT KÝ TRUYỀN THÔNG HARDWARE (UART / BLUETOOTH)
             </h2>
-            <button class="btn-sm btn-ghost" id="btn-clear-log">Xóa log</button>
           </div>
-
-          <div class="log-terminal" id="log-terminal">
-            <div class="log-entry sys">[HỆ THỐNG] Khởi tạo Digital Twin Web Dashboard thành công.</div>
-            <div class="log-entry sys">[HỆ THỐNG] Đang sẵn sàng kết nối Bluetooth BLE với chip ESP32...</div>
-          </div>
-
-          <div class="manual-hardware-controls">
-            <div class="controls-title">Bắn lệnh test trực tiếp xuống xe thật:</div>
-            <div class="hardware-buttons">
-              <button class="btn-hw" data-cmd="Tien">Tiến (F)</button>
-              <button class="btn-hw" data-cmd="Lui">Lùi (B)</button>
-              <button class="btn-hw" data-cmd="ReTrai">Rẽ Trái (L)</button>
-              <button class="btn-hw" data-cmd="RePhai">Rẽ Phải (R)</button>
-              <button class="btn-hw btn-hw-stop" data-cmd="TamDung">Dừng (S)</button>
-              <button class="btn-hw" data-cmd="KhoiDong">Bíp (K)</button>
-            </div>
-          </div>
+          <button class="btn-sm btn-ghost" id="btn-clear-log">Xóa log</button>
         </div>
 
-      </section>
-    </main>
+        <div class="log-terminal" id="log-terminal">
+          <div class="log-entry sys">[HỆ THỐNG] Khởi tạo Digital Twin Web Dashboard thành công.</div>
+          <div class="log-entry sys">[HỆ THỐNG] Đang sẵn sàng kết nối Bluetooth BLE với chip ESP32...</div>
+        </div>
+
+        <div class="manual-hardware-controls">
+          <div class="controls-title">Bắn lệnh test trực tiếp xuống xe thật (Hardware Override):</div>
+          <div class="hardware-buttons">
+            <button class="btn-hw" data-cmd="KhoiDong">Khởi Động (K)</button>
+            <button class="btn-hw btn-hw-stop" data-cmd="TamDung">Tạm Dừng (S)</button>
+            <button class="btn-hw" data-cmd="Tien">Tiến (F)</button>
+            <button class="btn-hw" data-cmd="Lui">Lùi (B)</button>
+            <button class="btn-hw" data-cmd="ReTrai">Rẽ Trái (L)</button>
+            <button class="btn-hw" data-cmd="RePhai">Rẽ Phải (R)</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
 
     <!-- FOOTER -->
     <footer class="app-footer">
@@ -200,9 +215,9 @@
   </div>
 
   <!-- SCRIPTS -->
-  <script src="audio_engine.js?v=3.2"></script>
-  <script src="digital_twin.js?v=3.0"></script>
-  <script src="ble_controller.js?v=3.2"></script>
+  <script src="audio_engine.js?v=4.0"></script>
+  <script src="digital_twin.js?v=4.0"></script>
+  <script src="ble_controller.js?v=4.0"></script>
   <script src="app.js?v=4.0"></script>
 </body>
 </html>

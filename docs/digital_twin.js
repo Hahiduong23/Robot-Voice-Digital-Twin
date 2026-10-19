@@ -21,7 +21,16 @@ class DigitalTwinArena {
 
     this.robotLength = 36;
     this.robotWidth = 24;
-    this.state = "DỪNG";
+
+    // Operational State Machine
+    // Must trigger "KhoiDong" first before moving. "TamDung" freezes and locks until "KhoiDong" again.
+    this.isStarted = false;
+    this.isPaused = false;
+    this.state = "CHỜ KHỞI ĐỘNG";
+
+    // Discrete step movement (di chuyển 1 đoạn ngắn nhất định)
+    this.remainingDistance = 0;
+    this.stepDistance = 55; // 55 pixels per voice step (~0.6m in physical scale)
 
     // Trail history
     this.trail = [];
@@ -52,55 +61,95 @@ class DigitalTwinArena {
     this.angularVelocity = 0;
     this.targetAngularVelocity = 0;
     this.targetTurnAngle = null;
-    this.state = "DỪNG";
+    this.remainingDistance = 0;
+    this.isStarted = false;
+    this.isPaused = false;
+    this.state = "CHỜ KHỞI ĐỘNG";
     this.trail = [];
   }
 
-  // Handle Voice Command
+  // Handle Voice or Manual Command
   applyCommand(cmd) {
+    // 1. LỆNH KHỞI ĐỘNG: Kích hoạt hệ thống hoặc mở khóa sau khi tạm dừng
+    if (cmd === "KhoiDong") {
+      this.isStarted = true;
+      this.isPaused = false;
+      this.isBlinking = true;
+      this.blinkTimer = 35;
+      this.targetSpeed = 0;
+      this.targetAngularVelocity = 0;
+      this.remainingDistance = 0;
+      this.state = "SẴN SÀNG";
+      return { ok: true, msg: "Đã khởi động robot! Sẵn sàng nhận lệnh điều khiển." };
+    }
+
+    // 2. LỆNH TẠM DỪNG: Phanh khẩn cấp & khóa toàn bộ chuyển động
+    if (cmd === "TamDung") {
+      this.isPaused = true;
+      this.targetSpeed = 0;
+      this.speed = 0;
+      this.targetAngularVelocity = 0;
+      this.angularVelocity = 0;
+      this.targetTurnAngle = null;
+      this.remainingDistance = 0;
+      this.state = "TẠM DỪNG";
+      return { ok: true, msg: "Xe đã tạm dừng! Toàn bộ chuyển động bị khóa cho đến khi nhận lệnh 'Khởi Động'." };
+    }
+
+    // 3. KIỂM TRA ĐIỀU KIỆN TIÊN QUYẾT: Phải khởi động trước và không bị tạm dừng
+    if (!this.isStarted) {
+      return { ok: false, msg: "Xe chưa khởi động! Vui lòng đọc lệnh 'Khởi Động' (hoặc phím I) trước." };
+    }
+
+    if (this.isPaused) {
+      return { ok: false, msg: "Xe đang bị tạm dừng khóa! Vui lòng đọc lệnh 'Khởi Động' (hoặc phím I) để mở khóa tiếp tục chạy." };
+    }
+
+    // 4. CÁC LỆNH DI CHUYỂN (Chỉ chạy khi xe đã khởi động và không bị tạm dừng)
     switch (cmd) {
       case "Tien":
-        this.targetSpeed = 100;
+        // Di chuyển 1 đoạn ngắn cố định (discrete step)
+        this.remainingDistance = this.stepDistance;
+        this.targetSpeed = 85;
         this.targetAngularVelocity = 0;
         this.targetTurnAngle = null;
         this.state = "TIẾN";
-        break;
+        return { ok: true, msg: "Tiến 1 bước ngắn (" + this.stepDistance + "px)" };
+
       case "Lui":
-        this.targetSpeed = -70;
+        // Lùi 1 đoạn ngắn cố định (discrete step)
+        this.remainingDistance = this.stepDistance;
+        this.targetSpeed = -65;
         this.targetAngularVelocity = 0;
         this.targetTurnAngle = null;
         this.state = "LÙI";
-        break;
+        return { ok: true, msg: "Lùi 1 bước ngắn (" + this.stepDistance + "px)" };
+
       case "ReTrai":
-        this.targetTurnAngle = this.angle - (Math.PI / 2); // 90 deg Left
-        this.targetAngularVelocity = -2.4;
-        this.targetSpeed = 30; // Small creep during turn
+        // Quay góc 90 độ sang trái
+        this.remainingDistance = 0;
+        this.targetTurnAngle = this.angle - (Math.PI / 2);
+        this.targetAngularVelocity = -2.5;
+        this.targetSpeed = 20;
         this.state = "RẼ TRÁI";
-        break;
+        return { ok: true, msg: "Rẽ trái 90°" };
+
       case "RePhai":
-        this.targetTurnAngle = this.angle + (Math.PI / 2); // 90 deg Right
-        this.targetAngularVelocity = 2.4;
-        this.targetSpeed = 30;
+        // Quay góc 90 độ sang phải
+        this.remainingDistance = 0;
+        this.targetTurnAngle = this.angle + (Math.PI / 2);
+        this.targetAngularVelocity = 2.5;
+        this.targetSpeed = 20;
         this.state = "RẼ PHẢI";
-        break;
-      case "TamDung":
-        this.targetSpeed = 0;
-        this.targetAngularVelocity = 0;
-        this.targetTurnAngle = null;
-        this.state = "TẠM DỪNG";
-        break;
-      case "KhoiDong":
-        this.isBlinking = true;
-        this.blinkTimer = 30;
-        this.state = "SẴN SÀNG";
-        break;
+        return { ok: true, msg: "Rẽ phải 90°" };
+
       default:
-        break;
+        return { ok: false, msg: "Lệnh không hỗ trợ: " + cmd };
     }
   }
 
   updatePhysics(dt) {
-    // Handle turning to target angle
+    // A. Xử lý quay theo góc đích 90 độ
     if (this.targetTurnAngle !== null) {
       const diff = this.targetTurnAngle - this.angle;
       if (Math.abs(diff) < 0.08) {
@@ -109,30 +158,46 @@ class DigitalTwinArena {
         this.targetAngularVelocity = 0;
         this.angularVelocity = 0;
         this.targetSpeed = 0;
-        this.state = "DỪNG";
+        if (this.isStarted && !this.isPaused) {
+          this.state = "SẴN SÀNG";
+        }
       } else {
-        this.angularVelocity = Math.sign(diff) * 2.4;
+        this.angularVelocity = Math.sign(diff) * 2.5;
       }
     } else {
-      // Smooth interpolation
       this.angularVelocity += (this.targetAngularVelocity - this.angularVelocity) * 0.15;
+    }
+
+    // B. Xử lý di chuyển tiến/lùi 1 đoạn ngắn nhất định (Step Distance)
+    if (this.remainingDistance > 0) {
+      const deltaDistance = Math.abs(this.speed * dt);
+      this.remainingDistance -= deltaDistance;
+
+      if (this.remainingDistance <= 0) {
+        this.remainingDistance = 0;
+        this.targetSpeed = 0;
+        this.speed = 0;
+        if (this.isStarted && !this.isPaused) {
+          this.state = "SẴN SÀNG";
+        }
+      }
     }
 
     this.speed += (this.targetSpeed - this.speed) * 0.15;
     this.angle += this.angularVelocity * dt;
 
-    // Displace position
+    // Cập nhật vị trí tọa độ
     this.x += Math.cos(this.angle) * this.speed * dt;
     this.y += Math.sin(this.angle) * this.speed * dt;
 
-    // Boundaries bounce
+    // Giới hạn biên sa bàn
     const pad = 25;
-    if (this.x < pad) { this.x = pad; this.targetSpeed = -this.targetSpeed * 0.5; }
-    if (this.x > this.width - pad) { this.x = this.width - pad; this.targetSpeed = -this.targetSpeed * 0.5; }
-    if (this.y < pad) { this.y = pad; this.targetSpeed = -this.targetSpeed * 0.5; }
-    if (this.y > this.height - pad) { this.y = this.height - pad; this.targetSpeed = -this.targetSpeed * 0.5; }
+    if (this.x < pad) { this.x = pad; this.targetSpeed = 0; this.remainingDistance = 0; }
+    if (this.x > this.width - pad) { this.x = this.width - pad; this.targetSpeed = 0; this.remainingDistance = 0; }
+    if (this.y < pad) { this.y = pad; this.targetSpeed = 0; this.remainingDistance = 0; }
+    if (this.y > this.height - pad) { this.y = this.height - pad; this.targetSpeed = 0; this.remainingDistance = 0; }
 
-    // Breadcrumb trail
+    // Dấu vết quỹ đạo bánh xe
     if (Math.abs(this.speed) > 5) {
       this.trail.push({ x: this.x, y: this.y, alpha: 1.0 });
       if (this.trail.length > this.maxTrail) this.trail.shift();
@@ -222,6 +287,8 @@ class DigitalTwinArena {
       ctx.fillStyle = "#10b981"; // Green blink
     } else if (this.state === "TẠM DỪNG") {
       ctx.fillStyle = "#ef4444"; // Brake red
+    } else if (!this.isStarted) {
+      ctx.fillStyle = "#f59e0b"; // Standby Amber
     } else {
       ctx.fillStyle = "#00f2fe"; // Neon cyan
     }
@@ -233,15 +300,23 @@ class DigitalTwinArena {
     ctx.restore();
 
     // Update HUD Metrics
-    document.getElementById("hud-pos").textContent = "(" + Math.round(this.x) + ", " + Math.round(this.y) + ")";
+    const hudPos = document.getElementById("hud-pos");
+    const hudAngle = document.getElementById("hud-angle");
+    const hudSpeed = document.getElementById("hud-speed");
+    const stateEl = document.getElementById("hud-state");
+
+    if (hudPos) hudPos.textContent = "(" + Math.round(this.x) + ", " + Math.round(this.y) + ")";
     let deg = Math.round((this.angle * 180 / Math.PI) % 360);
     if (deg < 0) deg += 360;
-    document.getElementById("hud-angle").textContent = deg + "°";
-    document.getElementById("hud-speed").textContent = Math.round(Math.abs(this.speed)) + " px/s";
+    if (hudAngle) hudAngle.textContent = deg + "°";
+    if (hudSpeed) hudSpeed.textContent = Math.round(Math.abs(this.speed)) + " px/s";
     
-    const stateEl = document.getElementById("hud-state");
-    stateEl.textContent = this.state;
-    stateEl.className = (this.state === "TẠM DỪNG") ? "state-stop" : "state-active";
+    if (stateEl) {
+      stateEl.textContent = this.state;
+      if (this.state === "TẠM DỪNG") stateEl.className = "state-stop";
+      else if (!this.isStarted) stateEl.className = "state-standby";
+      else stateEl.className = "state-active";
+    }
   }
 
   animate(now) {

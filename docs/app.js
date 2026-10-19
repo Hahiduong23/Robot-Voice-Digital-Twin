@@ -175,7 +175,9 @@ function startVisualizerLoop() {
     if (audioEngine) {
       audioEngine.renderWaveform(waveformCanvas);
       audioEngine.renderSpectrogram(spectrogramCanvas);
-      valRms.textContent = audioEngine.currentRmsDb.toFixed(1) + " dB";
+      if (valRms) {
+        valRms.textContent = audioEngine.currentRmsDb.toFixed(1) + " dB";
+      }
     }
     requestAnimationFrame(render);
   }
@@ -357,13 +359,20 @@ function handleVoiceTrigger(cmd, conf, latency) {
   bannerEl.classList.add("highlight");
   setTimeout(() => bannerEl.classList.remove("highlight"), 800);
 
-  // Trigger Digital Twin 2D Robot
+  // Trigger Digital Twin 2D Robot with State Machine Check
+  let canSendBle = true;
   if (arena) {
-    arena.applyCommand(cmd);
+    const res = arena.applyCommand(cmd);
+    if (!res.ok) {
+      addLog(`[ROBOT KHÓA] ${res.msg}`, "warn");
+      canSendBle = false;
+    } else {
+      addLog(`[ROBOT THỰC THI] ${res.msg}`, "sys");
+    }
   }
 
-  // Trigger Physical BLE Robot
-  if (ble) {
+  // Trigger Physical BLE Robot only if state is valid
+  if (ble && canSendBle) {
     ble.sendCommand(cmd);
   }
 
@@ -380,7 +389,7 @@ function playFeedbackBeep(cmd) {
     osc.connect(gain);
     gain.connect(ctx.destination);
 
-    const freq = (cmd === "TamDung") ? 330 : 660;
+    const freq = (cmd === "TamDung") ? 330 : (cmd === "KhoiDong" ? 880 : 660);
     osc.frequency.setValueAtTime(freq, ctx.currentTime);
     gain.gain.setValueAtTime(0.08, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
@@ -409,7 +418,7 @@ function softmax(arr) {
 }
 
 // ==========================================================================
-// EVENT LISTENERS: PUSH-TO-TALK (MOUSE + TOUCH + SPACEBAR)
+// EVENT LISTENERS: PUSH-TO-TALK & KEYBOARD CONTROLS (I = KHỞI ĐỘNG, U = TẠM DỪNG)
 // ==========================================================================
 
 // Audio Playback Button: Nghe lại âm thanh AI vừa nhận
@@ -450,27 +459,72 @@ btnPttMic.addEventListener("touchcancel", (e) => {
   handleStopSpeech();
 }, { passive: false });
 
-// Keyboard: Spacebar Hold-to-Talk
+// Keyboard: Spacebar Hold-to-Talk & Manual Keys (I = Khởi động, U = Tạm dừng, W/A/S/D)
 window.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && !e.repeat && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+  if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+
+  // 1. Phím Spacebar: Giữ để nói Push-to-Talk
+  if (e.code === "Space" && !e.repeat) {
     e.preventDefault();
     if (!isHoldActive) {
       handleStartSpeech();
     }
+    return;
   }
-  // Keyboard manual drive controls
-  if (["ArrowUp", "KeyW"].includes(e.code)) {
-    if (arena) arena.applyCommand("Tien");
-    if (ble && ble.isConnected) ble.sendCommand("Tien");
-  } else if (["ArrowDown", "KeyS"].includes(e.code)) {
-    if (arena) arena.applyCommand("Lui");
-    if (ble && ble.isConnected) ble.sendCommand("Lui");
-  } else if (["ArrowLeft", "KeyA"].includes(e.code)) {
-    if (arena) arena.applyCommand("ReTrai");
-    if (ble && ble.isConnected) ble.sendCommand("ReTrai");
-  } else if (["ArrowRight", "KeyD"].includes(e.code)) {
-    if (arena) arena.applyCommand("RePhai");
-    if (ble && ble.isConnected) ble.sendCommand("RePhai");
+
+  // 2. Phím I: Khởi động hệ thống (Bắt buộc phải khởi động trước khi chạy)
+  if (e.code === "KeyI" && !e.repeat) {
+    e.preventDefault();
+    if (arena) {
+      const res = arena.applyCommand("KhoiDong");
+      addLog(`[BÀN PHÍM 'I'] -> ${res.msg}`, "sys");
+    }
+    if (ble && ble.isConnected) ble.sendCommand("KhoiDong");
+    playFeedbackBeep("KhoiDong");
+    return;
+  }
+
+  // 3. Phím U: Tạm dừng / Phanh khẩn cấp (Khóa mọi di chuyển cho đến khi bấm I)
+  if (e.code === "KeyU" && !e.repeat) {
+    e.preventDefault();
+    if (arena) {
+      const res = arena.applyCommand("TamDung");
+      addLog(`[BÀN PHÍM 'U'] -> ${res.msg}`, "warn");
+    }
+    if (ble && ble.isConnected) ble.sendCommand("TamDung");
+    playFeedbackBeep("TamDung");
+    return;
+  }
+
+  // 4. Các phím di chuyển thủ công: W (Tiến), S (Lùi), A (Trái), D (Phải)
+  if (["ArrowUp", "KeyW"].includes(e.code) && !e.repeat) {
+    e.preventDefault();
+    if (arena) {
+      const res = arena.applyCommand("Tien");
+      addLog(`[BÀN PHÍM 'W'] -> ${res.msg}`, res.ok ? "sys" : "warn");
+      if (res.ok && ble && ble.isConnected) ble.sendCommand("Tien");
+    }
+  } else if (["ArrowDown", "KeyS"].includes(e.code) && !e.repeat) {
+    e.preventDefault();
+    if (arena) {
+      const res = arena.applyCommand("Lui");
+      addLog(`[BÀN PHÍM 'S'] -> ${res.msg}`, res.ok ? "sys" : "warn");
+      if (res.ok && ble && ble.isConnected) ble.sendCommand("Lui");
+    }
+  } else if (["ArrowLeft", "KeyA"].includes(e.code) && !e.repeat) {
+    e.preventDefault();
+    if (arena) {
+      const res = arena.applyCommand("ReTrai");
+      addLog(`[BÀN PHÍM 'A'] -> ${res.msg}`, res.ok ? "sys" : "warn");
+      if (res.ok && ble && ble.isConnected) ble.sendCommand("ReTrai");
+    }
+  } else if (["ArrowRight", "KeyD"].includes(e.code) && !e.repeat) {
+    e.preventDefault();
+    if (arena) {
+      const res = arena.applyCommand("RePhai");
+      addLog(`[BÀN PHÍM 'D'] -> ${res.msg}`, res.ok ? "sys" : "warn");
+      if (res.ok && ble && ble.isConnected) ble.sendCommand("RePhai");
+    }
   }
 });
 
@@ -481,6 +535,22 @@ window.addEventListener("keyup", (e) => {
       handleStopSpeech();
     }
   }
+});
+
+// Hardware manual override buttons
+document.querySelectorAll(".btn-hw").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const cmd = btn.getAttribute("data-cmd");
+    if (!cmd) return;
+    if (arena) {
+      const res = arena.applyCommand(cmd);
+      addLog(`[NÚT TEST: ${cmd}] -> ${res.msg}`, res.ok ? "sys" : "warn");
+      if (res.ok && ble && ble.isConnected) {
+        ble.sendCommand(cmd);
+      }
+    }
+    playFeedbackBeep(cmd);
+  });
 });
 
 // BLE Connect Button

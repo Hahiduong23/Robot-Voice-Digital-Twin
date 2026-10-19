@@ -65,6 +65,18 @@ class AudioEngine {
       }
 
       const sourceNode = this.audioCtx.createMediaStreamSource(this.mediaStream);
+      
+      // AnalyserNode for silky-smooth 60fps live waveform and frequency visualization
+      this.analyser = this.audioCtx.createAnalyser();
+      this.analyser.fftSize = 1024;
+      this.analyser.smoothingTimeConstant = 0.5;
+      this.timeDomainData = new Uint8Array(this.analyser.fftSize);
+      this.freqDomainData = new Uint8Array(this.analyser.frequencyBinCount);
+      sourceNode.connect(this.analyser);
+
+      // Rolling real-time spectrum history during speech recording
+      this.liveRollingWaterfall = [];
+
       const bufferSize = 2048;
       this.processorNode = this.audioCtx.createScriptProcessor(bufferSize, 1, 1);
 
@@ -363,29 +375,79 @@ class AudioEngine {
 
   // Draw Waveform onto HTML5 Canvas
   renderWaveform(canvas) {
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
     ctx.clearRect(0, 0, width, height);
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    // Center Baseline Grid
+    ctx.strokeStyle = 'rgba(0, 174, 239, 0.15)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, height / 2);
     ctx.lineTo(width, height / 2);
     ctx.stroke();
 
-    const audio = this.displayBuffer;
+    // 1. LIVE RECORDING: Silky-smooth 60fps microphone time-domain visualization
+    if (this.isRecording && this.analyser && this.timeDomainData) {
+      this.analyser.getByteTimeDomainData(this.timeDomainData);
+
+      ctx.strokeStyle = '#ff3b30'; // Glowing Red while user speaks
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = 'rgba(255, 59, 48, 0.6)';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+
+      const sliceWidth = width / this.timeDomainData.length;
+      let x = 0;
+
+      for (let i = 0; i < this.timeDomainData.length; i++) {
+        const v = this.timeDomainData[i] / 128.0; // 0.0 to 2.0 (1.0 is center)
+        const y = (v * (height / 2));
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+
+        x += sliceWidth;
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0; // Reset shadow
+
+      // Center-pad window indication
+      ctx.strokeStyle = '#ffb800';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(width * 0.15, 6, width * 0.70, height - 12);
+      ctx.setLineDash([]);
+      return;
+    }
+
+    // 2. POST-RECORDING / STANDBY: Display normalized centered 2.0s waveform
+    const audio = this.lastProcessedAudio16k || this.displayBuffer;
+    let hasSignal = false;
+    for (let i = 0; i < 200; i++) {
+      if (Math.abs(audio[i * 100]) > 0.02) { hasSignal = true; break; }
+    }
+
+    if (!hasSignal) {
+      // Idle Flat Line with pulse
+      ctx.strokeStyle = 'rgba(0, 242, 254, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
+      ctx.stroke();
+      return;
+    }
+
+    ctx.strokeStyle = '#00aeef'; // Cyan for finished processed audio
+    ctx.lineWidth = 1.8;
+    ctx.shadowColor = 'rgba(0, 174, 239, 0.4)';
+    ctx.shadowBlur = 6;
+
     const step = Math.ceil(audio.length / width);
     const ampScale = (height / 2) * 0.9;
-
-    if (this.isRecording) {
-      ctx.strokeStyle = '#ef4444'; // Red glowing while holding
-      ctx.lineWidth = 2.2;
-    } else {
-      ctx.strokeStyle = '#00f2fe'; // Cyan when finished / ready
-      ctx.lineWidth = 1.5;
-    }
 
     ctx.beginPath();
     for (let x = 0; x < width; x++) {
@@ -395,54 +457,114 @@ class AudioEngine {
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Draw 2.0s Center Window Boundary
+    ctx.strokeStyle = 'rgba(255, 184, 0, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.strokeRect(width * 0.15, 6, width * 0.70, height - 12);
+    ctx.setLineDash([]);
   }
 
   // Draw Log-Mel Spectrogram onto HTML5 Canvas
   renderSpectrogram(canvas) {
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
     ctx.clearRect(0, 0, width, height);
 
-    if (this.rollingSpec.length === 0) {
-      ctx.fillStyle = '#64748b';
-      ctx.font = '12px JetBrains Mono';
-      ctx.textAlign = 'center';
-      ctx.fillText('Đang chờ khẩu lệnh để tạo phổ Log-Mel Spectrogram [128x63]...', width / 2, height / 2 + 4);
+    // 1. LIVE RECORDING: Render Real-time scrolling Frequency Spectrum Waterfall
+    if (this.isRecording && this.analyser && this.freqDomainData) {
+      this.analyser.getByteFrequencyData(this.freqDomainData);
+
+      // Downsample 512 bins to 64 display bins
+      const bins = 64;
+      const binStep = Math.floor(this.freqDomainData.length / bins);
+      const colData = new Float32Array(bins);
+      for (let b = 0; b < bins; b++) {
+        colData[b] = this.freqDomainData[b * binStep] / 255.0;
+      }
+
+      this.liveRollingWaterfall.push(colData);
+      if (this.liveRollingWaterfall.length > 70) {
+        this.liveRollingWaterfall.shift();
+      }
+
+      const numCols = this.liveRollingWaterfall.length;
+      const colWidth = width / 70;
+      const rowHeight = height / bins;
+
+      for (let c = 0; c < numCols; c++) {
+        const frame = this.liveRollingWaterfall[c];
+        const x = c * colWidth;
+        for (let b = 0; b < bins; b++) {
+          const y = height - (b + 1) * rowHeight;
+          const val = frame[b];
+
+          // Heatmap: Dark blue -> Teal -> Yellow -> Red
+          let r = 0, g = 0, bVal = 0;
+          if (val < 0.35) {
+            bVal = Math.floor(180 * (val / 0.35));
+          } else if (val < 0.7) {
+            const t = (val - 0.35) / 0.35;
+            g = Math.floor(220 * t);
+            bVal = Math.floor(180 * (1 - t));
+          } else {
+            const t = (val - 0.7) / 0.3;
+            r = Math.floor(255 * t);
+            g = Math.floor(220 * (1 - t * 0.5));
+          }
+
+          ctx.fillStyle = `rgb(${r},${g},${bVal})`;
+          ctx.fillRect(x, y, colWidth + 0.5, rowHeight + 0.5);
+        }
+      }
       return;
     }
 
-    const numCols = this.rollingSpec.length;
-    const colWidth = width / numCols;
-    const rowHeight = height / this.nMels;
+    // 2. POST-RECORDING: Render Exact Log-Mel Spectrogram (128 Mel bands x 63 frames)
+    if (this.rollingSpec.length > 0) {
+      const numCols = this.rollingSpec.length;
+      const colWidth = width / numCols;
+      const rowHeight = height / this.nMels;
 
-    for (let c = 0; c < numCols; c++) {
-      const col = this.rollingSpec[c];
-      const x = c * colWidth;
-      for (let m = 0; m < this.nMels; m++) {
-        const y = height - (m + 1) * rowHeight;
-        const normVal = Math.min(Math.max(col[m], 0), 1);
+      for (let c = 0; c < numCols; c++) {
+        const col = this.rollingSpec[c];
+        const x = c * colWidth;
+        for (let m = 0; m < this.nMels; m++) {
+          const y = height - (m + 1) * rowHeight;
+          const normVal = Math.min(Math.max(col[m], 0), 1);
 
-        let r = 0, g = 0, b = 0;
-        if (normVal < 0.33) {
-          const t = normVal / 0.33;
-          r = Math.floor(40 * t);
-          b = Math.floor(120 * t);
-        } else if (normVal < 0.66) {
-          const t = (normVal - 0.33) / 0.33;
-          r = Math.floor(40 + 200 * t);
-          g = Math.floor(80 * t);
-          b = Math.floor(120 * (1 - t));
-        } else {
-          const t = (normVal - 0.66) / 0.34;
-          r = 240 + Math.floor(15 * t);
-          g = Math.floor(80 + 175 * t);
-          b = Math.floor(200 * t);
+          let r = 0, g = 0, b = 0;
+          if (normVal < 0.33) {
+            const t = normVal / 0.33;
+            r = Math.floor(40 * t);
+            b = Math.floor(120 * t);
+          } else if (normVal < 0.66) {
+            const t = (normVal - 0.33) / 0.33;
+            r = Math.floor(40 + 200 * t);
+            g = Math.floor(80 * t);
+            b = Math.floor(120 * (1 - t));
+          } else {
+            const t = (normVal - 0.66) / 0.34;
+            r = 240 + Math.floor(15 * t);
+            g = Math.floor(80 + 175 * t);
+            b = Math.floor(200 * t);
+          }
+
+          ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+          ctx.fillRect(x, y, colWidth + 0.5, rowHeight + 0.5);
         }
-
-        ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
-        ctx.fillRect(x, y, colWidth + 0.5, rowHeight + 0.5);
       }
+      return;
     }
+
+    // 3. STANDBY / IDLE STATE
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('🎙️ Giữ nút hoặc Spacebar để nói — Phổ âm thanh sẽ hiển thị trực tiếp tại đây', width / 2, height / 2 + 4);
   }
 }
