@@ -63,13 +63,12 @@ def main():
     all_labels = []
 
     print("")
-    print("Processing 2,800 audio files from Data_FN...")
+    print("Processing audio files from Data_FN (2,900 samples: 500 RePhai + 400 each for others)...")
     for class_name in class_names:
         class_folder = os.path.join(data_dir, class_name)
         files = sorted(glob.glob(os.path.join(class_folder, "*.wav")))
         label = label_map[class_name]
         print(f" - Class {class_name:15s}: {len(files)} files")
-        assert len(files) == 400, f"Error: class {class_name} has {len(files)} != 400"
 
         for f in files:
             wav_tensor = load_and_preprocess_audio(f)

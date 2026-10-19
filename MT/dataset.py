@@ -1,14 +1,14 @@
 import os
+import random
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import torchaudio.transforms as T
-import random
 
 class SpecAugment(nn.Module):
     """
     Google Brain SpecAugment with stochastic application probability p=0.8:
-    Applies Frequency Masking and Time Masking directly to Mel-Spectrogram tensors.
+    Applies Frequency Masking, Time Masking, and Time-Shift directly to Mel-Spectrogram tensors.
     """
     def __init__(self, freq_mask_param=16, time_mask_param=12, p=0.8):
         super().__init__()
@@ -21,6 +21,10 @@ class SpecAugment(nn.Module):
         if random.random() < self.p:
             x = self.freq_mask(x)
             x = self.time_mask(x)
+            if random.random() < 0.5:
+                # Small random time jitter (+/- 1-3 frames ~ 32-96ms) to boost live recording robustness
+                shift = random.randint(-3, 3)
+                x = torch.roll(x, shifts=shift, dims=-1)
         return x
 
 class VoiceDataset(Dataset):
@@ -67,4 +71,4 @@ if __name__ == "__main__":
     for batch_X, batch_y in train_loader:
         print(f"Train batch X: {batch_X.shape}, y: {batch_y.shape}")
         break
-    print("[SUCCESS] dataset.py updated with p=0.8 SpecAugment!")
+    print("[SUCCESS] dataset.py updated with robust time-shift SpecAugment!")
