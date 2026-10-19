@@ -1,5 +1,5 @@
 # =========================================================================
-# Export SOTA BC-ResNet / M5 to Standalone ONNX format for Web & Edge
+# Export SOTA Midterm Model (M5_SE_VoiceResNet) to Standalone ONNX format for Web & Edge
 # =========================================================================
 import os
 import sys
@@ -10,9 +10,9 @@ sys.path.append('MT')
 from models import get_model
 
 def export_model(
-    model_name='BC_ResNet',
-    checkpoint_path='MT/results/BC_ResNet_AdamW.pth',
-    output_onnx_path='MT/results/bc_resnet.onnx'
+    model_name='M5_SE_VoiceResNet',
+    checkpoint_path='MT/results/M5_SE_VoiceResNet_AdamW.pth',
+    output_onnx_path='MT/results/m5_voice_resnet.onnx'
 ):
     print(f'[INFO] Nạp mô hình {model_name} từ: {checkpoint_path}')
     model = get_model(model_name, num_classes=7)

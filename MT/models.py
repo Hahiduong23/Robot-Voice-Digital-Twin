@@ -285,7 +285,7 @@ class BC_ResNet(nn.Module):
         x = self.dropout(x)
         return self.fc(x)
 
-def get_model(model_name="BC_ResNet", num_classes=7):
+def get_model(model_name="M5_SE_VoiceResNet", num_classes=7):
     models = {
         "M1_BaselineCNN": M1_BaselineCNN,
         "M2_DropoutCNN": M2_DropoutCNN,
