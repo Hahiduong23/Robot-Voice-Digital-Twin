@@ -19,8 +19,8 @@ class DigitalTwinArena {
     this.angularVelocity = 0;
     this.targetAngularVelocity = 0;
 
-    this.robotLength = 36;
-    this.robotWidth = 24;
+    this.robotLength = 52;
+    this.robotWidth = 36;
 
     // Operational State Machine
     // Must trigger "KhoiDong" first before moving. "TamDung" freezes and locks until "KhoiDong" again.
@@ -191,7 +191,7 @@ class DigitalTwinArena {
     this.y += Math.sin(this.angle) * this.speed * dt;
 
     // Giới hạn biên sa bàn
-    const pad = 25;
+    const pad = 30;
     if (this.x < pad) { this.x = pad; this.targetSpeed = 0; this.remainingDistance = 0; }
     if (this.x > this.width - pad) { this.x = this.width - pad; this.targetSpeed = 0; this.remainingDistance = 0; }
     if (this.y < pad) { this.y = pad; this.targetSpeed = 0; this.remainingDistance = 0; }
@@ -211,8 +211,8 @@ class DigitalTwinArena {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
 
-    // 1. Grid Background
-    ctx.strokeStyle = "rgba(0, 242, 254, 0.06)";
+    // 1. Blueprint Grid Background
+    ctx.strokeStyle = "rgba(0, 174, 239, 0.08)";
     ctx.lineWidth = 1;
     const gridSize = 30;
     for (let x = 0; x < this.width; x += gridSize) {
@@ -222,79 +222,160 @@ class DigitalTwinArena {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(this.width, y); ctx.stroke();
     }
 
-    // 2. Arena Boundary Wall Glow
-    ctx.strokeStyle = "rgba(0, 242, 254, 0.35)";
+    // 2. Arena Boundary Wall (Blueprint dashed style)
+    ctx.strokeStyle = "#1f6b9f";
     ctx.lineWidth = 2;
-    ctx.strokeRect(10, 10, this.width - 20, this.height - 20);
+    ctx.setLineDash([8, 6]);
+    ctx.strokeRect(18, 18, this.width - 36, this.height - 36);
+    ctx.setLineDash([]);
 
-    // 3. Render Trail
+    // 3. Center Origin Circle Marker
+    ctx.strokeStyle = "rgba(0, 174, 239, 0.22)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(this.width / 2, this.height / 2, 50, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(this.width / 2, this.height / 2, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#00aeef";
+    ctx.fill();
+
+    // 4. Obstacle Target A-1
+    ctx.fillStyle = "rgba(255, 184, 0, 0.2)";
+    ctx.strokeStyle = "#ffb800";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(80, 60, 38, 38, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#ffb800";
+    ctx.font = "bold 11px Montserrat, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("A-1", 99, 79);
+
+    // 5. Goal Target FLAG
+    ctx.fillStyle = "rgba(255, 59, 48, 0.2)";
+    ctx.strokeStyle = "#ff3b30";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(this.width - 110, this.height - 90, 44, 38, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#ff3b30";
+    ctx.font = "bold 11px Montserrat, sans-serif";
+    ctx.fillText("FLAG", this.width - 88, this.height - 71);
+
+    // 6. Breadcrumb Motion Trail
     for (let i = 0; i < this.trail.length; i++) {
       const p = this.trail[i];
       const norm = (i + 1) / this.trail.length;
-      ctx.fillStyle = "rgba(0, 242, 254, " + (norm * 0.35) + ")";
+      ctx.fillStyle = "rgba(0, 174, 239, " + (norm * 0.45) + ")";
       ctx.beginPath();
       ctx.arc(p.x, p.y, 2.5 * norm, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 4. Render Robot Body
+    // 7. Render Robot Car (Rich Blueprint / Maker Enclosure)
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
 
-    // Headlight Cone (Sensor Range)
-    const coneGrad = ctx.createRadialGradient(0, 0, 10, 80, 0, 80);
-    coneGrad.addColorStop(0, "rgba(0, 242, 254, 0.3)");
-    coneGrad.addColorStop(1, "rgba(0, 242, 254, 0.0)");
+    // A. Ultrasonic / LiDAR Sensor Radar Beam (Glowing gradient cone)
+    const coneGrad = ctx.createRadialGradient(0, 0, 10, 80, 0, 95);
+    coneGrad.addColorStop(0, "rgba(0, 174, 239, 0.45)");
+    coneGrad.addColorStop(1, "rgba(0, 174, 239, 0.0)");
     ctx.fillStyle = coneGrad;
     ctx.beginPath();
-    ctx.moveTo(10, 0);
-    ctx.arc(0, 0, 85, -Math.PI / 6, Math.PI / 6);
+    ctx.moveTo(16, 0);
+    ctx.arc(0, 0, 95, -Math.PI / 5, Math.PI / 5);
     ctx.closePath();
     ctx.fill();
 
-    // Wheels (Left & Right DC motors)
-    ctx.fillStyle = "#1e293b";
-    ctx.strokeStyle = "#475569";
-    ctx.lineWidth = 1;
-    // Left wheel
-    ctx.fillRect(-10, -this.robotWidth / 2 - 4, 20, 5);
-    ctx.strokeRect(-10, -this.robotWidth / 2 - 4, 20, 5);
-    // Right wheel
-    ctx.fillRect(-10, this.robotWidth / 2 - 1, 20, 5);
-    ctx.strokeRect(-10, this.robotWidth / 2 - 1, 20, 5);
-
-    // Chassis Box
-    ctx.fillStyle = "#0f172a";
-    ctx.strokeStyle = (this.state === "TẠM DỪNG") ? "#ef4444" : "#00f2fe";
+    // B. Left DC Wheel (Dark navy with gold rim)
+    ctx.fillStyle = "#0a2a46";
+    ctx.strokeStyle = "#ffb800";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(-this.robotLength / 2, -this.robotWidth / 2, this.robotLength, this.robotWidth, 6);
+    ctx.roundRect(-22, -this.robotWidth / 2 - 6, 26, 10, 3);
     ctx.fill();
     ctx.stroke();
 
-    // Direction arrow
-    ctx.fillStyle = "#00f2fe";
+    // C. Right DC Wheel
     ctx.beginPath();
-    ctx.moveTo(12, 0);
-    ctx.lineTo(2, -6);
-    ctx.lineTo(2, 6);
-    ctx.closePath();
+    ctx.roundRect(-22, this.robotWidth / 2 - 4, 26, 10, 3);
     ctx.fill();
+    ctx.stroke();
 
-    // Headlights (LEDs)
+    // D. Front Caster Wheel (Metallic swivel)
+    ctx.beginPath();
+    ctx.arc(20, 0, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#b0cddb";
+    ctx.fill();
+    ctx.strokeStyle = "#0a2a46";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // E. Wooden Base Plate (Laser-cut plate)
+    ctx.fillStyle = "#dfbc8a";
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-this.robotLength / 2, -this.robotWidth / 2, this.robotLength, this.robotWidth, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // F. Top Navy Electronics Enclosure
+    ctx.fillStyle = "#0b3860";
+    ctx.strokeStyle = (this.state === "TẠM DỪNG") ? "#ff3b30" : "#00aeef";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-this.robotLength / 2 + 7, -this.robotWidth / 2 + 5, this.robotLength - 14, this.robotWidth - 10, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // G. Microcontroller / ESP32 Board
+    ctx.fillStyle = "#08223a";
+    ctx.strokeStyle = "#ffb800";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(-12, -9, 20, 18, 3);
+    ctx.fill();
+    ctx.stroke();
+
+    // H. ESP32 Status LED
+    ctx.beginPath();
+    ctx.arc(-2, 0, 3.5, 0, Math.PI * 2);
     if (this.isBlinking && (this.blinkTimer % 6 < 3)) {
       ctx.fillStyle = "#10b981"; // Green blink
     } else if (this.state === "TẠM DỪNG") {
-      ctx.fillStyle = "#ef4444"; // Brake red
+      ctx.fillStyle = "#ff3b30"; // Red brake
     } else if (!this.isStarted) {
       ctx.fillStyle = "#f59e0b"; // Standby Amber
     } else {
-      ctx.fillStyle = "#00f2fe"; // Neon cyan
+      ctx.fillStyle = "#10b981"; // Green online
     }
+    ctx.fill();
+
+    // I. Heading Arrow (Sharp Gold Pointer)
+    ctx.fillStyle = "#ffb800";
     ctx.beginPath();
-    ctx.arc(this.robotLength / 2 - 2, -7, 2.5, 0, Math.PI * 2);
-    ctx.arc(this.robotLength / 2 - 2, 7, 2.5, 0, Math.PI * 2);
+    ctx.moveTo(25, 0);
+    ctx.lineTo(16, -6);
+    ctx.lineTo(16, 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // J. Front Headlights
+    let headlightColor = "#00aeef";
+    if (this.state === "TẠM DỪNG") headlightColor = "#ff3b30";
+    else if (!this.isStarted) headlightColor = "#f59e0b";
+    else if (this.isBlinking) headlightColor = "#10b981";
+
+    ctx.fillStyle = headlightColor;
+    ctx.beginPath();
+    ctx.arc(this.robotLength / 2 - 2, -8, 2.5, 0, Math.PI * 2);
+    ctx.arc(this.robotLength / 2 - 2, 8, 2.5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
