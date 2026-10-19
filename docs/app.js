@@ -110,7 +110,7 @@ async function initApp() {
     // Load ONNX Model: BC-ResNet (Qualcomm AI Research)
     addLog("[HỆ THỐNG] Đang nạp mô hình SOTA BC-ResNet (Qualcomm) (ONNX WebAssembly)...", "sys");
     ort.env.wasm.numThreads = 1;
-    ortSession = await ort.InferenceSession.create("models/bc_resnet.onnx?v=2800", {
+    ortSession = await ort.InferenceSession.create("models/bc_resnet.onnx?v=2800_datan", {
       executionProviders: ["wasm"]
     });
 
@@ -121,7 +121,7 @@ async function initApp() {
     modelText.textContent = "BC-ResNet: Sẵn sàng";
 
     btnPttMic.disabled = false;
-    addLog("[HỆ THỐNG] Nạp mô hình SOTA BC-ResNet (Data_FN 2,800 mẫu) thành công! Cơ chế Push-to-Talk 2.0s chuẩn hóa đã sẵn sàng!", "sys");
+    addLog("[HỆ THỐNG] Nạp mô hình SOTA BC-ResNet (Data_FN 2,800 mẫu DataN) thành công! Cơ chế Push-to-Talk 2.0s chuẩn hóa đã sẵn sàng!", "sys");
 
     // Start Visualizer Loop
     startVisualizerLoop();
