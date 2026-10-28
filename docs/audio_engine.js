@@ -1,6 +1,6 @@
 // ==========================================================================
 // AUDIO ENGINE: Web Audio API (Hardware 44.1k/48k -> OfflineAudioContext 16kHz)
-// Hardware Sinc Anti-Aliasing Resampler + Peak Normalization 0.75 + Center-Pad 2.0s
+// Hardware Sinc Anti-Aliasing Resampler + Peak Normalization 0.65 + Center-Pad 2.0s
 // Generates exact [1, 1, 128, 63] tensors matching PyTorch training 100%
 // ==========================================================================
 

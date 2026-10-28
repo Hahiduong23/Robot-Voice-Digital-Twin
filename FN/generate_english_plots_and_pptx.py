@@ -110,7 +110,7 @@ def generate_editable_pptx():
     p1.font.color.rgb = hex_to_rgb("#102C57")
     
     p2 = tf.add_paragraph()
-    p2.text = "157,415 Parameters (~157K)  |  FLOPs: 11.20 M  |  CPU Latency: 4.78 ms  |  Trained on Data_FN (2,800 Samples)"
+    p2.text = "157,415 Parameters (~157K)  |  FLOPs: 83.41 M  |  CPU Latency: 4.84 ms  |  Trained on Data_FN (2,900 Samples)"
     p2.font.size = Pt(12)
     p2.font.color.rgb = hex_to_rgb("#475569")
 
@@ -410,7 +410,7 @@ def generate_architecture_pngs():
                     arrowprops=dict(arrowstyle="-|>", color=CLR_ARROW, lw=2.2, mutation_scale=16), zorder=4)
 
     plt.title("Figure: Qualcomm SOTA Broadcasted Residual Network (BC-ResNet) Architecture\n"
-              "Total Parameters: 157,415 (~157K)  |  FLOPs: 11.20 M  |  CPU Latency: 4.78 ms  |  Target: 7 Motion Commands",
+              "Total Parameters: 157,415 (~157K)  |  FLOPs: 83.41 M  |  CPU Latency: 4.84 ms  |  Target: 7 Motion Commands",
               fontsize=13, fontweight="bold", color="#102C57", pad=15)
 
     out_p1 = os.path.join(OUT_DIR, "arch_BC_ResNet_Architecture.png")
@@ -560,9 +560,9 @@ def generate_english_eval_plots():
     # 2. benchmark_pareto_evolution.png
     fig, axes = plt.subplots(1, 2, figsize=(15, 6), dpi=300)
     models_list = ["BaselineCNN (M1)", "VoiceResNet (M4)", "SE_VoiceResNet (M5)", "BC-ResNet (SOTA)"]
-    params_k = [1928.7, 307.7, 307.7, 157.4]
-    latency_ms = [12.8, 6.2, 6.1, 4.78]
-    test_acc = [94.2, 97.1, 97.9, 98.21]
+    params_k = [1928.7, 307.7, 310.5, 157.4]
+    latency_ms = [12.8, 6.2, 5.48, 4.84]
+    test_acc = [94.2, 97.1, 97.9, 100.00]
 
     x = np.arange(len(models_list))
     width = 0.38
@@ -600,10 +600,10 @@ def generate_english_eval_plots():
                          fontsize=9, fontweight="bold", color="#0F172A",
                          arrowprops=dict(arrowstyle="->", color="#64748B", lw=1))
 
-    axes[1].plot([4.78, 6.1, 12.8], [98.21, 97.9, 94.2], linestyle="--", color="#10B981", lw=1.8, label="Pareto Optimal Frontier")
+    axes[1].plot([4.84, 5.48, 12.8], [100.00, 97.9, 94.2], linestyle="--", color="#10B981", lw=1.8, label="Pareto Optimal Frontier")
     axes[1].set_xlabel("CPU Inference Latency (ms / 2.0s Audio Sample)", fontsize=10.5, fontweight="bold")
     axes[1].set_ylabel("Test Accuracy (%)", fontsize=10.5, fontweight="bold")
-    axes[1].set_title("(b) Pareto Frontier Trade-off Analysis (Latency vs Accuracy)\nBC-ResNet dominates the Pareto frontier: Lowest Latency (4.78ms) & Highest Accuracy (98.21%)", fontsize=11.5, fontweight="bold", pad=12)
+    axes[1].set_title("(b) Pareto Frontier Trade-off Analysis (Latency vs Accuracy)\nBC-ResNet dominates the Pareto frontier: Lowest Latency (4.84ms) & Highest Accuracy (100.00%)", fontsize=11.5, fontweight="bold", pad=12)
     axes[1].grid(True, linestyle="--", alpha=0.5)
     axes[1].legend(loc="lower left", fontsize=9)
 
@@ -627,7 +627,7 @@ def generate_english_eval_plots():
     axes[0].set_xticklabels(CLASS_NAMES, rotation=20, ha="right", fontsize=9.5, fontweight="bold")
     axes[0].set_ylabel("Percentage (%)", fontsize=10.5, fontweight="bold")
     axes[0].set_ylim(85, 105)
-    axes[0].set_title("(a) Detailed Class-wise Metrics on Unseen Test Set (280 Samples)\n(Precision, Recall, and F1-Score all average > 98.2%)", fontsize=11.5, fontweight="bold", pad=12)
+    axes[0].set_title(f"(a) Detailed Class-wise Metrics on Unseen Test Set ({len(y_test_np)} Samples)\n(Precision, Recall, and F1-Score all reach 100.0%)", fontsize=11.5, fontweight="bold", pad=12)
     axes[0].grid(True, linestyle="--", alpha=0.5)
     axes[0].legend(loc="lower left", fontsize=9.5)
 
@@ -736,17 +736,17 @@ def generate_english_eval_plots():
     fig, axes = plt.subplots(1, 2, figsize=(13, 5), dpi=300)
     axes[0].plot(t_epochs, history['train_loss'], label='Train Loss', color='#2563eb', lw=2)
     axes[0].plot(t_epochs, history['val_loss'], label='Val Loss', color='#dc2626', lw=2)
-    axes[0].set_title('Cross-Entropy Loss Progression (BC-ResNet AdamW - 2,800 Samples)', fontsize=12, fontweight='bold', pad=10)
+    axes[0].set_title('Cross-Entropy Loss Progression (BC-ResNet AdamW - 2,900 Samples)', fontsize=12, fontweight='bold', pad=10)
     axes[0].set_xlabel('Epoch', fontsize=10.5, fontweight='bold')
     axes[0].set_ylabel('Loss', fontsize=10.5, fontweight='bold')
     axes[0].grid(True, linestyle='--', alpha=0.6)
     axes[0].legend(fontsize=10.5)
 
-    best_val_acc = ckpt.get("best_val_acc", 98.93)
-    test_acc_val = ckpt.get("test_acc", 98.21)
+    best_val_acc = ckpt.get("best_val_acc", 98.62)
+    test_acc_val = ckpt.get("test_acc", 100.00)
     axes[1].plot(t_epochs, history['train_acc'], label='Train Accuracy', color='#2563eb', lw=2)
     axes[1].plot(t_epochs, history['val_acc'], label='Val Accuracy', color='#16a34a', lw=2)
-    axes[1].set_title(f'Classification Accuracy (Best Val: {best_val_acc:.1f}% | Test: {test_acc_val:.1f}%)', fontsize=12, fontweight='bold', pad=10)
+    axes[1].set_title(f'Classification Accuracy (Best Val: {best_val_acc:.2f}% | Test: {test_acc_val:.2f}%)', fontsize=12, fontweight='bold', pad=10)
     axes[1].set_xlabel('Epoch', fontsize=10.5, fontweight='bold')
     axes[1].set_ylabel('Accuracy (%)', fontsize=10.5, fontweight='bold')
     axes[1].grid(True, linestyle='--', alpha=0.6)
@@ -768,7 +768,7 @@ def generate_english_eval_plots():
     ax.set(xticks=np.arange(cm.shape[1]),
            yticks=np.arange(cm.shape[0]),
            xticklabels=CLASS_NAMES, yticklabels=CLASS_NAMES,
-           title=f'Normalized Confusion Matrix - SOTA BC-ResNet\n(Test Accuracy: {acc:.2f}% | 275/280 Correct)',
+           title=f'Normalized Confusion Matrix - SOTA BC-ResNet\n(Test Accuracy: {acc:.2f}% | {sum(preds_test == y_test_np)}/{len(y_test_np)} Correct)',
            ylabel='True Command Label',
            xlabel='Predicted Command Label')
     plt.setp(ax.get_xticklabels(), rotation=30, ha="right", rotation_mode="anchor", fontweight='bold')

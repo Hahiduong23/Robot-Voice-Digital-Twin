@@ -26,14 +26,14 @@
 
 ### 1.3. Bảng so sánh tiến hóa kiến trúc (M1 -> M5 -> SOTA BC-ResNet)
 
-| Mô hình | Giai đoạn | Kiến trúc đặc trưng | Tham số (Params) | FLOPs | Độ trễ CPU (ms) | Test Accuracy | Đánh giá kỹ thuật |
+| Mô hình | Giai đoạn | Kiến trúc đặc trưng | Tham số (Params) | FLOPs (Chuẩn) | Độ trễ CPU (ms) | Test Accuracy | Đánh giá kỹ thuật |
 | :--- | :---: | :--- | :---: | :---: | :---: | :---: | :--- |
-| **M1** | Giữa kỳ | BaselineCNN (3 Conv + Flatten + 2 Dense) | 1,928,711 | 5.51 M | 1.95 ms | 100.00% | Bị nghẽn tham số ở tầng FC (>95%) |
-| **M2** | Giữa kỳ | DropoutCNN (M1 + Dropout 0.4) | 1,928,711 | 5.51 M | 1.89 ms | 100.00% | Hạn chế co-adaptation |
-| **M3** | Giữa kỳ | BatchNormCNN (M1 + BatchNorm2d) | 1,929,159 | 5.51 M | 2.13 ms | 100.00% | Ổn định phân phối kích hoạt nội tầng |
-| **M4** | Giữa kỳ | VoiceResNet (ResNet Blocks + GAP) | 307,687 | 14.94 M | 4.82 ms | 100.00% | **Cắt giảm 84.05% tham số** |
-| **M5** | Giữa kỳ | **SE_VoiceResNet (Đề xuất Giữa kỳ)** | **310,503** | **14.95 M** | **5.48 ms** | **100.00%** | **Tái hiệu chuẩn phổ kênh (Attention)** |
-| **BC-ResNet** | **Cuối kỳ** | **BC-ResNet (Qualcomm SOTA KWS)** | **157,415** | **6.82 M** | **4.71 ms** | **100.00%** | 🟢 **Nhẹ hơn 49.3%, tối ưu WebAssembly** |
+| **M1** | Giữa kỳ | BaselineCNN (3 Conv + Flatten + 2 Dense) | 1,928,711 | 152.23 M | 1.95 ms | 100.00% | Bị nghẽn tham số ở tầng FC (>95%) |
+| **M2** | Giữa kỳ | DropoutCNN (M1 + Dropout 0.4) | 1,928,711 | 152.23 M | 1.89 ms | 100.00% | Hạn chế co-adaptation |
+| **M3** | Giữa kỳ | BatchNormCNN (M1 + BatchNorm2d) | 1,929,159 | 152.23 M | 2.13 ms | 100.00% | Ổn định phân phối kích hoạt nội tầng |
+| **M4** | Giữa kỳ | VoiceResNet (ResNet Blocks + GAP) | 307,687 | 771.68 M | 4.82 ms | 100.00% | **Cắt giảm 84.05% tham số** |
+| **M5** | Giữa kỳ | **SE_VoiceResNet (Đề xuất Giữa kỳ)** | **310,503** | **771.69 M** | **5.48 ms** | **100.00%** | **Tái hiệu chuẩn phổ kênh (Attention)** |
+| **BC-ResNet** | **Cuối kỳ** | **BC-ResNet (Qualcomm SOTA KWS)** | **157,415** | **83.41 M** | **4.84 ms** | **100.00%** | 🟢 **Nhẹ hơn 49.3%, giảm 89.2% FLOPs, tối ưu WebAssembly** |
 
 ---
 

@@ -111,16 +111,16 @@ p2.font.color.rgb = RGBColor(203, 213, 225)
 info_box = s1.shapes.add_textbox(Inches(1.0), Inches(4.3), Inches(11.333), Inches(0.8))
 tf_info = info_box.text_frame
 p_info = tf_info.paragraphs[0]
-p_info.text = "Student: Nguyen Hai Duong   |   Student ID: 23011418   |   Dataset: Data_FN (2,800 Balanced WAVs)"
+p_info.text = "Student: Nguyen Hai Duong   |   Student ID: 23011418   |   Dataset: Data_FN (2,900 Standardized WAVs)"
 p_info.font.size = Pt(13)
 p_info.font.bold = True
 p_info.font.color.rgb = C_TEXT_WHITE
 
 # 4 Metric Highlights Badges
 metrics = [
-    ("TEST ACCURACY", "98.21%", "275 / 280 Unseen Samples Correct", C_EMERALD),
-    ("PARAMETERS", "157.4 K", "48.8% Smaller than Midterm M5", C_ACCENT_BL),
-    ("CPU INFERENCE", "4.78 ms", "Real-Time on Raspberry Pi / Web", C_AMBER),
+    ("TEST ACCURACY", "100.00%", "290 / 290 Unseen Samples Correct", C_EMERALD),
+    ("PARAMETERS", "157.4 K", "49.3% Smaller than Midterm M5", C_ACCENT_BL),
+    ("CPU INFERENCE", "4.84 ms", "Real-Time on Raspberry Pi / Web", C_AMBER),
     ("STANDALONE ONNX", "617 KB", "Opset 17 WebAssembly Deploy", RGBColor(168, 85, 247))
 ]
 
@@ -305,7 +305,7 @@ if os.path.exists(img_path):
 s8 = prs.slides.add_slide(blank_layout)
 add_header(s8, "Stage 4: Diagnostic Performance on Test Set",
            "Precision, Recall, F1-Score Breakdown & ROC-AUC Curves",
-           "Rigorous Evaluation on 280 Completely Unseen Multi-Speaker Recordings (Data_FN)")
+           "Rigorous Evaluation on 290 Completely Unseen Multi-Speaker Recordings (Data_FN)")
 
 # Subplot 1: Metrics Breakdown
 add_card(s8, Inches(0.8), Inches(1.8), Inches(7.5), Inches(5.1))

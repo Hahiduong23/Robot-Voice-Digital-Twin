@@ -246,19 +246,20 @@ body {
 .control-hero-card {
   padding: 14px 20px;
   display: flex;
-  flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: nowrap;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .control-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1 1 auto;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Tactile Chunky Buttons */
@@ -266,26 +267,31 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   font-family: var(--font-heading);
   font-weight: 900;
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  padding: 12px 20px;
-  border-radius: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
   cursor: pointer;
   border: 2px solid #ffffff;
   transition: all 0.15s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
+  white-space: normal;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 54px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .btn-ptt {
   background: linear-gradient(180deg, #ffc72c 0%, #ff9900 100%);
   color: #061c31;
   box-shadow: 0 4px 0 #b36b00, 0 6px 14px rgba(255, 170, 0, 0.35);
-  flex: 0 0 auto;
 }
 
 .btn-ptt:hover:not(:disabled) {
@@ -312,7 +318,6 @@ body {
   background: linear-gradient(180deg, #00c0f7 0%, #0084c7 100%);
   color: #ffffff;
   box-shadow: 0 4px 0 #005a8a, 0 6px 14px rgba(0, 174, 239, 0.25);
-  flex: 0 0 auto;
 }
 
 .btn-ble:hover {
@@ -330,7 +335,6 @@ body {
   color: #d2e7f9;
   border: 2px solid #1f6b9f;
   box-shadow: 0 4px 0 #051624;
-  flex: 0 0 auto;
 }
 
 .btn-playback:hover:not(:disabled) {
@@ -345,8 +349,42 @@ body {
 }
 
 .btn .icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .control-hero-card {
+    padding: 10px 12px;
+  }
+  .control-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .btn {
+    padding: 12px 6px;
+    font-size: 0.8rem;
+    gap: 6px;
+    border-radius: 10px;
+    min-height: 48px;
+  }
+  .btn .icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .control-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .btn {
+    font-size: 0.85rem;
+    padding: 12px 14px;
+    min-height: 48px;
+  }
 }
 
 /* Mark Rober PRO TIP Callout Box */

@@ -3,7 +3,7 @@ import json
 import matplotlib.pyplot as plt
 
 def main():
-    summary_path = "ADL/results/ablation_summary.json"
+    summary_path = "MT/results/ablation_summary.json"
     if not os.path.exists(summary_path):
         print(f"Error: {summary_path} not found.")
         return
@@ -125,8 +125,8 @@ def main():
                title="Models", title_fontsize=9.5)
 
     plt.tight_layout()
-    os.makedirs("ADL/results", exist_ok=True)
-    plt.savefig("ADL/results/pareto_tradeoff.png", dpi=200, bbox_inches="tight")
+    os.makedirs("MT/results", exist_ok=True)
+    plt.savefig("MT/results/pareto_tradeoff.png", dpi=200, bbox_inches="tight")
     plt.close()
     print("[SUCCESS] Regenerated pareto_tradeoff.png with further expanded legend line spacing!")
 

@@ -92,13 +92,14 @@ async function initApp() {
         if (state === "connected") {
           dot.className = "status-dot online";
           btnConnectBle.classList.add("recording");
-          btnConnectBle.querySelector("span").textContent = "Ngắt BLE";
+          btnConnectBle.querySelector("span").textContent = "NGẮT ROBOT";
         } else if (state === "connecting") {
           dot.className = "status-dot loading";
+          btnConnectBle.querySelector("span").textContent = "ĐANG KẾT NỐI...";
         } else {
           dot.className = "status-dot offline";
           btnConnectBle.classList.remove("recording");
-          btnConnectBle.querySelector("span").textContent = "📡 Kết nối Xe Robot";
+          btnConnectBle.querySelector("span").textContent = "KẾT NỐI ROBOT";
         }
       },
       (msg, type) => addLog(msg, type)
@@ -207,7 +208,7 @@ async function handleStartSpeech() {
   audioEngine.startRecording();
 
   btnPttMic.classList.add("recording");
-  pttText.textContent = "🔴 ĐANG THU ÂM... (THẢ ĐỂ GỬI LỆNH)";
+  pttText.textContent = "ĐANG THU ÂM...";
   vadIndicator.textContent = "🔴 ĐANG THU ÂM KHẨU LỆNH...";
   vadIndicator.className = "live-indicator recording";
 
@@ -222,7 +223,7 @@ async function handleStopSpeech() {
   isHoldActive = false;
 
   btnPttMic.classList.remove("recording");
-  pttText.textContent = "⚡ ĐANG CÂN 2S & NHẬN DIỆN...";
+  pttText.textContent = "ĐANG NHẬN DIỆN...";
   vadIndicator.textContent = "⚡ ĐANG CÂN 2S & NHẬN DIỆN...";
   vadIndicator.className = "live-indicator processing";
 
@@ -240,7 +241,7 @@ async function handleStopSpeech() {
     addLog("[CẢNH BÁO] Thời lượng ấn giữ quá ngắn (< 0.25s). Vui lòng ấn giữ trong khi nói khẩu lệnh.", "warn");
     vadIndicator.textContent = "⚠️ QUÁ NGẮN (< 0.25s)";
     vadIndicator.className = "live-indicator";
-    pttText.textContent = "🎙️ ẤN GIỮ ĐỂ NÓI (THẢ ĐỂ GỬI LỆNH)";
+    pttText.textContent = "GIỮ ĐỂ NÓI";
     return;
   }
 
@@ -258,7 +259,7 @@ async function handleStopSpeech() {
     addLog("[IM LẶNG] Không phát hiện tiếng nói (Đỉnh: " + result.peakBefore.toFixed(3) + ", RMS: " + result.rmsBefore.toFixed(4) + "). Đã bỏ qua suy luận để ngăn chặn dự đoán sai!", "warn");
     vadIndicator.textContent = "🤫 KHÔNG CÓ TIẾNG NÓI (IM LẶNG)";
     vadIndicator.className = "live-indicator";
-    pttText.textContent = "🎙️ ẤN GIỮ ĐỂ NÓI (THẢ ĐỂ GỬI LỆNH)";
+    pttText.textContent = "GIỮ ĐỂ NÓI";
 
     // Reset all gauge bars
     constants.class_names.forEach(cls => {
@@ -282,7 +283,7 @@ async function handleStopSpeech() {
 
   vadIndicator.textContent = "🎙️ SẴN SÀNG THU ÂM";
   vadIndicator.className = "live-indicator";
-  pttText.textContent = "🎙️ ẤN GIỮ ĐỂ NÓI (THẢ ĐỂ GỬI LỆNH)";
+  pttText.textContent = "GIỮ ĐỂ NÓI";
 }
 
 // AI Inference on Normalized, Center-Padded 2.0s Mel Spectrogram

@@ -94,8 +94,8 @@
 
 ## 3. CHI TIẾT NỘI DUNG VÀ CHỨC NĂNG CÁC FILE MÃ NGUỒN
 
-### 3.1. `ADL/preprocess_offline.py`
-- **Mục đích**: Chuyển đổi toàn bộ âm thanh thô từ `Data_1400/` thành Log-Mel Spectrogram và lưu dưới dạng PyTorch tensor tuần tự hóa để tối ưu hóa I/O, giúp quá trình train tăng tốc gấp 10-15 lần (không cần nạp file .wav động trong loop).
+### 3.1. `MT/preprocess_offline.py`
+- **Mục đích**: Chuyển đổi toàn bộ âm thanh thô từ `Data_MT/` thành Log-Mel Spectrogram và lưu dưới dạng PyTorch tensor tuần tự hóa để tối ưu hóa I/O, giúp quá trình train tăng tốc gấp 10-15 lần (không cần nạp file .wav động trong loop).
 - **Quy trình xử lý âm thanh**:
   1. Đọc audio mono ở tần số lấy mẫu f_s = 16,000 Hz.
   2. Chuẩn hóa độ dài: Cố định 2.0 giây (tương đương 32,000 samples). Nếu ngắn hơn sẽ center-pad bằng 0 đối xứng 2 đầu; nếu dài hơn sẽ center-crop.
@@ -108,17 +108,17 @@
 - **Phân chia dữ liệu (Stratified Split)**:
   - Tỷ lệ: 80% Train (1,120 mẫu) : 10% Val (140 mẫu) : 10% Test (140 mẫu).
   - Cân bằng chuẩn xác: Mỗi lớp có đúng 160 mẫu Train, 20 mẫu Val, 20 mẫu Test.
-- **Đầu ra**: `ADL/dataset_processed.pt` (43.08 MB).
+- **Đầu ra**: `MT/dataset_processed.pt` (45.17 MB).
 
-### 3.2. `ADL/train_ablation.py`
+### 3.2. `MT/train_ablation.py`
 - **Mục đích**: Kịch bản thực thi toàn bộ pipeline khoa học máy tính:
   1. Định nghĩa các kiến trúc từ M1 đến M5.
   2. Bổ sung kỹ thuật tăng cường đặc trưng SpecAugment (Time masking & Frequency masking).
-  3. Đo đạc chính xác số tham số (Parameters), FLOPs (`thop.profile`), và độ trễ CPU (Inference Latency trên 100 lần lặp độc lập sau khi warm-up).
+  3. Đo đạc chính xác số tham số (Parameters), FLOPs, và độ trễ CPU (Inference Latency trên 100 lần lặp độc lập sau khi warm-up).
   4. Thực hiện Ablation Study (M1 -> M5) với cùng seed ngẫu nhiên (42).
   5. Thực hiện Optimizer Benchmark trên mô hình đề xuất M5 (SGD, SGD+Momentum, Adam, AdamW + Cosine Annealing).
-  6. Xuất toàn bộ biểu đồ khoa học chất lượng cao (300 DPI) vào `ADL/results/`.
-  7. Trích xuất trực quan hóa Grad-CAM cho mô hình M5 tại lớp tích chập cuối cùng (`layer3[-1].conv2`).
+  6. Xuất toàn bộ biểu đồ khoa học chất lượng cao (300 DPI) vào `MT/results/`.
+  7. Trích xuất trực quan hóa Grad-CAM cho mô hình M5 tại lớp tích chập cuối cùng (`layer3.conv2`).
 
 ---
 
@@ -147,11 +147,11 @@
 
 | Mô hình | Kiến trúc đặc trưng | Tham số (Params) | FLOPs | Độ trễ CPU (ms) | Test Accuracy | Test Loss |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **M1** | BaselineCNN (3 Conv + Flatten + 2 Dense) | 1,928,711 | 5.51 M | 1.95 ms | 100.00% | 0.4776 |
-| **M2** | DropoutCNN (M1 + Dropout 0.4) | 1,928,711 | 5.51 M | 1.89 ms | 100.00% | 0.4822 |
-| **M3** | BatchNormCNN (M1 + BatchNorm2d) | 1,929,159 | 5.51 M | 2.13 ms | 100.00% | 0.4975 |
-| **M4** | VoiceResNet (ResNet Blocks + GAP) | 307,687 | 14.94 M | 4.82 ms | 100.00% | 0.5010 |
-| **M5** | **SE_VoiceResNet (Đề xuất: M4 + SE Block)** | **310,503** | **14.95 M** | **5.48 ms** | **100.00%** | **0.4826** |
+| **M1** | BaselineCNN (3 Conv + Flatten + 2 Dense) | 1,928,711 | 152.23 M | 1.95 ms | 100.00% | 0.4776 |
+| **M2** | DropoutCNN (M1 + Dropout 0.4) | 1,928,711 | 152.23 M | 1.89 ms | 100.00% | 0.4822 |
+| **M3** | BatchNormCNN (M1 + BatchNorm2d) | 1,929,159 | 152.23 M | 2.13 ms | 100.00% | 0.4975 |
+| **M4** | VoiceResNet (ResNet Blocks + GAP) | 307,687 | 771.68 M | 4.82 ms | 100.00% | 0.5010 |
+| **M5** | **SE_VoiceResNet (Đề xuất: M4 + SE Block)** | **310,503** | **771.69 M** | **5.48 ms** | **100.00%** | **0.4826** |
 
 ---
 
@@ -227,31 +227,31 @@ Thực nghiệm trên mô hình M5 trong 20 epochs với 4 thuật toán tối �
   ```
 
 ### 8.2. Chạy lại tiền xử lý dữ liệu từ đầu
-Nếu có thêm dữ liệu âm thanh mới bỏ vào `Data_1400/`:
+Nếu có thêm dữ liệu âm thanh mới bỏ vào `Data_MT/`:
 ```bash
-python3 ADL/preprocess_offline.py
+python3 MT/preprocess_offline.py
 ```
-*Lệnh này sẽ quét 7 thư mục con, trích xuất Log-Mel Spectrogram và ghi đè file `ADL/dataset_processed.pt`.*
+*Lệnh này sẽ quét 7 thư mục con, trích xuất Log-Mel Spectrogram và ghi đè file `MT/dataset_processed.pt`.*
 
 ### 8.3. Chạy lại toàn bộ thực nghiệm & sinh biểu đồ mới
 ```bash
-python3 ADL/train_ablation.py
+python3 MT/train_ablation.py
 ```
 *Lệnh này sẽ:*
 - Chạy huấn luyện và đánh giá M1, M2, M3, M4, M5.
 - Đo FLOPs và CPU Latency thực tế.
 - Chạy Optimizer Benchmark trên M5.
-- Lưu mô hình tốt nhất vào `ADL/results/M5_SE_VoiceResNet_AdamW.pth`.
-- Xuất tất cả các hình vẽ phân tích độ nét cao vào `ADL/results/`.
+- Lưu mô hình tốt nhất vào `MT/results/M5_SE_VoiceResNet_AdamW.pth`.
+- Xuất tất cả các hình vẽ phân tích độ nét cao vào `MT/results/`.
 
 ### 8.4. Nạp checkpoint để chạy suy luận (Inference Demo)
 ```python
 import torch
-from ADL.models import get_model
+from MT.models import get_model
 
 device = torch.device('cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu'))
 model = get_model('M5_SE_VoiceResNet', num_classes=7).to(device)
-ckpt = torch.load('ADL/results/M5_SE_VoiceResNet_AdamW.pth', map_location=device, weights_only=False)
+ckpt = torch.load('MT/results/M5_SE_VoiceResNet_AdamW.pth', map_location=device, weights_only=False)
 model.load_state_dict(ckpt['state_dict'])
 model.eval()
 
@@ -291,11 +291,12 @@ Nếu anh Hải Dương hoặc một AI Agent khác tiếp tục thực hiện c
 ## 7. GIAI ĐOẠN CUỐI KỲ: TRIỂN KHAI THỜI GIAN THỰC SOTA BC-RESNET & ROBOT DIGITAL TWIN
 
 ### 7.1. Chuyển dịch Mô hình sang SOTA BC-ResNet (Qualcomm AI Research)
-* **Lý do chuyển đổi**: Bước sang Cuối kỳ, mục tiêu tối thượng là thời gian thực trên WebAssembly và nhúng. Mô hình M5 (310k params) được nâng cấp lên **BC-ResNet (Broadcasted Residual Network)**:
+* **Lý do chuyển đổi**: Bước sang Cuối kỳ, mục tiêu tối thượng là thời gian thực trên WebAssembly và nhúng. Mô hình M5 (310k params) được nâng cấp lên **BC-ResNet (Broadcasted Residual Network)** huấn luyện trên bộ dữ liệu mở rộng **`Data_FN` (2,900 mẫu: 500 mẫu `RePhai` + 400 mẫu/lớp cho 6 lớp còn lại)**:
   * Tham số giảm từ 310,503 xuống **157,415** (giảm 49.3%).
-  * Độ trễ suy luận giảm xuống **4.71 ms**.
+  * Khối lượng tính toán giảm từ 771.69 MFLOPs xuống **83.41 MFLOPs** (giảm 89.2%).
+  * Độ trễ suy luận giảm xuống **4.84 ms**.
   * File ONNX WebAssembly chỉ **617 KB**.
-  * Độ chính xác Test Set đạt tuyệt đối **100.00%**.
+  * Độ chính xác Test Set (290 mẫu độc lập) đạt tuyệt đối **100.00%** (Best Val Accuracy: **98.62%**).
 
 ### 7.2. Giải pháp Đột phá Xử lý Lệch Miền Âm thanh (Acoustic Domain Shift)
 Qua thực nghiệm đối soát giữa dữ liệu thu âm iPhone Voice Memos và Web Audio API, hệ thống đã giải quyết 5 bài toán cốt tử:

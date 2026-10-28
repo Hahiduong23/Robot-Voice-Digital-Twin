@@ -24,7 +24,7 @@ def estimate_flops(model, input_size=(1, 1, 128, 63), device="cpu"):
         in_c = module.in_channels
         k_h, k_w = module.kernel_size
         groups = module.groups
-        macs_per_item = (in_c // groups) * k_h * k_w * out_h * out_w
+        macs_per_item = out_c * (in_c // groups) * k_h * k_w * out_h * out_w
         flops += macs_per_item * 2  # 1 MAC = 2 FLOPs
 
     def linear_hook(module, input, output):

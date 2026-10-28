@@ -43,8 +43,8 @@ def load_and_preprocess_audio(file_path):
     return torch.from_numpy(waveform).unsqueeze(0)
 
 def main():
-    data_dir = "Data_1400"
-    output_path = "ADL/dataset_processed.pt"
+    data_dir = "Data_MT"
+    output_path = "MT/dataset_processed.pt"
     
     class_names = sorted([d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d)) and not d.startswith(".")])
     label_map = {name: idx for idx, name in enumerate(class_names)}

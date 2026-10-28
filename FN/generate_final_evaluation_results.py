@@ -160,7 +160,7 @@ def arrow_top_route(ax, p1, p2, y_top, color=CLR_ARROW, lw=2.2):
 # ------------------------------------------------------------------------------
 # 1. LOAD MODEL & DATASET
 # ------------------------------------------------------------------------------
-print("[1/8] Loading BC-ResNet model and test dataset Data_FN (2,800 samples)...")
+print("[1/8] Loading BC-ResNet model and test dataset Data_FN (2,900 samples)...")
 ckpt_path = os.path.join(OUT_DIR, "BC_ResNet_AdamW.pth")
 dataset_path = os.path.join(BASE_DIR, "FN", "dataset_processed_2800.pt")
 
@@ -418,10 +418,10 @@ def generate_pareto_evolution_plot():
     fig, axes = plt.subplots(1, 2, figsize=(15, 6), dpi=300)
 
     models_list = ["BaselineCNN (M1)", "VoiceResNet (M4)", "SE_VoiceResNet (M5)", "BC-ResNet (SOTA)"]
-    params_k = [1928.7, 307.7, 307.7, 157.4]
-    flops_m  = [14.94, 14.94, 14.98, 11.20]
-    latency_ms = [12.8, 6.2, 6.1, 4.78]
-    test_acc = [94.2, 97.1, 97.9, 98.21]
+    params_k = [1928.7, 307.7, 310.5, 157.4]
+    flops_m  = [152.23, 771.68, 771.69, 83.41]
+    latency_ms = [12.8, 6.2, 5.48, 4.84]
+    test_acc = [94.2, 97.1, 97.9, 100.00]
 
     x = np.arange(len(models_list))
     width = 0.38
@@ -459,10 +459,10 @@ def generate_pareto_evolution_plot():
                          fontsize=9, fontweight="bold", color="#0F172A",
                          arrowprops=dict(arrowstyle="->", color="#64748B", lw=1))
 
-    axes[1].plot([4.78, 6.1, 12.8], [98.21, 97.9, 94.2], linestyle="--", color="#10B981", lw=1.8, label="Pareto Optimal Frontier")
+    axes[1].plot([4.84, 5.48, 12.8], [100.00, 97.9, 94.2], linestyle="--", color="#10B981", lw=1.8, label="Pareto Optimal Frontier")
     axes[1].set_xlabel("CPU Inference Latency (ms / 2.0s Audio Sample)", fontsize=10.5, fontweight="bold")
     axes[1].set_ylabel("Test Accuracy (%)", fontsize=10.5, fontweight="bold")
-    axes[1].set_title("(b) Pareto Frontier Analysis (Latency vs Accuracy)\nBC-ResNet Dominates: Fastest (4.78ms) & Most Accurate (98.21%)", fontsize=11.5, fontweight="bold", pad=12)
+    axes[1].set_title("(b) Pareto Frontier Analysis (Latency vs Accuracy)\nBC-ResNet Dominates: Fastest (4.84ms) & Most Accurate (100.00%)", fontsize=11.5, fontweight="bold", pad=12)
     axes[1].grid(True, linestyle="--", alpha=0.5)
     axes[1].legend(loc="lower left", fontsize=9)
 

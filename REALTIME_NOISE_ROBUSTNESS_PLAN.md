@@ -435,9 +435,9 @@ Khi bước sang giai đoạn Cuối kỳ, hệ thống được nâng cấp to�
 * Nhờ đó, mô hình tốn ít hơn phân nửa số tham số nhưng vẫn bắt dính đặc trưng âm vị giọng người chính xác hơn hẳn!
 
 #### 3. Trạng thái triển khai:
-* Đã lưu Checkpoint: `MT/results/BC_ResNet_AdamW.pth` (654 KB).
-* Đã lưu Biểu đồ học tập: `MT/results/curves_BC_ResNet_AdamW.png`.
-* Đã cập nhật file ONNX chạy Web: `docs/models/bc_resnet.onnx` (617 KB) và `docs/models/m5_voice_resnet.onnx`.
+* Đã lưu Checkpoint: `FN/results/BC_ResNet_AdamW.pth` (654 KB, huấn luyện trên `Data_FN` 2,900 mẫu).
+* Đã lưu Biểu đồ học tập: `FN/results/curves_BC_ResNet_AdamW.png`.
+* Đã cập nhật file ONNX chạy Web: `docs/models/bc_resnet.onnx` (617 KB) và `docs/models/m5_voice_resnet.onnx` (1.19 MB).
 * Đã cập nhật giao diện Dashboard Web tại `docs/index.html` và `docs/app.js`.
 
 ---

@@ -142,22 +142,22 @@ void beepBuzzer() {
 // Xu ly byte lenh nhan tu trinh duyet Web
 void executeCommand(char cmd) {
   switch (cmd) {
-    case F: // Forward
+    case 'F': // Forward
       moveForward();
       break;
-    case B: // Backward
+    case 'B': // Backward
       moveBackward();
       break;
-    case L: // Turn Left
+    case 'L': // Turn Left
       turnLeft();
       break;
-    case R: // Turn Right
+    case 'R': // Turn Right
       turnRight();
       break;
-    case S: // Stop
+    case 'S': // Stop
       stopMotors();
       break;
-    case K: // Khoi Dong
+    case 'K': // Khoi Dong
       beepBuzzer();
       break;
     default:

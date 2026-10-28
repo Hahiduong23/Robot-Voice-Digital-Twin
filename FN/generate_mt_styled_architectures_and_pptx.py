@@ -230,7 +230,7 @@ def generate_m5_styled_bc_resnet_architecture():
 
     # Figure Header
     plt.title("Figure: Qualcomm SOTA Broadcasted Residual Network (BC-ResNet) Architecture\n"
-              "Total Parameters: 157,415 (~157K)  |  FLOPs: 11.20 M  |  CPU Latency: 4.78 ms  |  Trained on Data_FN (2,800 Samples)",
+              "Total Parameters: 157,415 (~157K)  |  FLOPs: 83.41 M  |  CPU Latency: 4.84 ms  |  Trained on Data_FN (2,900 Samples)",
               fontsize=14, fontweight='bold', color="#102C57", pad=20)
 
     out_p = os.path.join(RES_DIR, "arch_BC_ResNet_Architecture.png")
@@ -335,7 +335,7 @@ def generate_native_editable_pptx():
     p1.font.color.rgb = hex_to_rgb("#102C57")
     
     p2 = tf1.add_paragraph()
-    p2.text = "157,415 Parameters (~157K)  |  FLOPs: 11.20 M  |  CPU Latency: 4.78 ms  |  Trained on Data_FN (2,800 Samples)"
+    p2.text = "157,415 Parameters (~157K)  |  FLOPs: 83.41 M  |  CPU Latency: 4.84 ms  |  Trained on Data_FN (2,900 Samples)"
     p2.font.size = Pt(11)
     p2.font.color.rgb = hex_to_rgb("#475569")
 

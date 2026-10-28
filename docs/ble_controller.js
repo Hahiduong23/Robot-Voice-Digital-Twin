@@ -114,14 +114,14 @@ class BleController {
     const timestamp = new Date().toLocaleTimeString("vi-VN", { hour12: false }) + "." + String(new Date().getMilliseconds()).padStart(3, "0");
 
     if (!this.isConnected || !this.rxCharacteristic) {
-      this.onLog("[" + timestamp + "] [SIMULATION ONLY] Lệnh  + cmdName +  -> Ký tự  + charCode +  (Chưa bật xe thật)", "sys");
+      this.onLog("[" + timestamp + "] [SIMULATION ONLY] Lệnh " + cmdName + " -> Ký tự '" + charCode + "' (Chưa bật xe thật)", "sys");
       return false;
     }
 
     try {
       const data = new Uint8Array([charCode.charCodeAt(0)]);
       await this.rxCharacteristic.writeValueWithoutResponse(data);
-      this.onLog("[" + timestamp + "] [GỬI BLE] -> Đã gửi mã  + charCode +  (" + cmdName + ") xuống xe thật!", "tx");
+      this.onLog("[" + timestamp + "] [GỬI BLE] -> Đã gửi mã '" + charCode + "' (" + cmdName + ") xuống xe thật!", "tx");
       return true;
     } catch (err) {
       this.onLog("[BLE GỬI LỖI] " + err.message, "err");

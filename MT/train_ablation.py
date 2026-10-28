@@ -132,7 +132,7 @@ def train_single_model(model_name, optimizer_type="AdamW", epochs=35, lr=0.001, 
     latency = measure_latency(model, device="cpu")
 
     save_tag = f"{model_name}_{optimizer_type}"
-    ckpt_path = f"ADL/results/{save_tag}.pth"
+    ckpt_path = f"MT/results/{save_tag}.pth"
     torch.save({
         "model_name": model_name,
         "optimizer_type": optimizer_type,
@@ -145,7 +145,7 @@ def train_single_model(model_name, optimizer_type="AdamW", epochs=35, lr=0.001, 
         "latency_ms": latency
     }, ckpt_path)
 
-    plot_learning_curves(history, f"ADL/results/curves_{save_tag}.png", title=save_tag)
+    plot_learning_curves(history, f"MT/results/curves_{save_tag}.png", title=save_tag)
 
     return {
         "model_name": model_name,
@@ -166,7 +166,7 @@ def train_single_model(model_name, optimizer_type="AdamW", epochs=35, lr=0.001, 
 def main():
     device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
     print(f"Using device: {device}")
-    os.makedirs("ADL/results", exist_ok=True)
+    os.makedirs("MT/results", exist_ok=True)
 
     # 1. Ablation Study: M1 -> M5 (35 epochs)
     ablation_models = [
@@ -191,9 +191,9 @@ def main():
             "total_train_time_s": res["total_train_time_s"]
         })
 
-    with open("ADL/results/ablation_summary.json", "w") as f:
+    with open("MT/results/ablation_summary.json", "w") as f:
         json.dump(ablation_results, f, indent=4)
-    print("\n[Ablation Study Completed! Summary saved to ADL/results/ablation_summary.json]")
+    print("\n[Ablation Study Completed! Summary saved to MT/results/ablation_summary.json]")
 
     # 2. Optimizer Benchmark on Best Model (M5)
     print("\n=================== STARTING PART 2: OPTIMIZER BENCHMARK ===================")
@@ -232,7 +232,7 @@ def main():
     plt.grid(True, linestyle=":", alpha=0.6)
 
     plt.tight_layout()
-    plt.savefig("ADL/results/optimizer_comparison.png", dpi=200)
+    plt.savefig("MT/results/optimizer_comparison.png", dpi=200)
     plt.close()
 
     # 3. Confusion Matrix for Best Model (M5 + AdamW)
@@ -241,7 +241,7 @@ def main():
         last_m5_res["y_true"],
         last_m5_res["y_pred"],
         last_m5_res["class_names"],
-        "ADL/results/confusion_matrix_M5.png",
+        "MT/results/confusion_matrix_M5.png",
         title="Confusion Matrix - M5 SE_VoiceResNet (AdamW + CosineAnnealing)"
     )
 
@@ -251,7 +251,7 @@ def main():
     sample_x, sample_y = next(iter(test_loader))
     
     m5_model = get_model("M5_SE_VoiceResNet", num_classes=len(last_m5_res["class_names"]))
-    ckpt = torch.load("ADL/results/M5_SE_VoiceResNet_AdamW.pth", weights_only=False)
+    ckpt = torch.load("MT/results/M5_SE_VoiceResNet_AdamW.pth", weights_only=False)
     m5_model.load_state_dict(ckpt["state_dict"])
     m5_model.eval()
 
@@ -265,7 +265,7 @@ def main():
             single_x[0],
             cam,
             title=f"True: {true_label} | Pred: {pred_label}",
-            save_path=f"ADL/results/gradcam_sample_{idx}_{true_label}.png"
+            save_path=f"MT/results/gradcam_sample_{idx}_{true_label}.png"
         )
     print("[SUCCESS] All upgrades successfully executed and visualized!")
 

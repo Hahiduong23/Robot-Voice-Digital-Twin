@@ -2,7 +2,7 @@
     {
         "model_name": "M1_BaselineCNN",
         "params": 1928711,
-        "flops_m": 5.512704,
+        "flops_m": 152.233728,
         "latency_ms": 1.9450870901346207,
         "best_val_acc": 100.0,
         "test_acc": 100.0,
@@ -12,7 +12,7 @@
     {
         "model_name": "M2_DropoutCNN",
         "params": 1928711,
-        "flops_m": 5.512704,
+        "flops_m": 152.233728,
         "latency_ms": 1.89399000024423,
         "best_val_acc": 100.0,
         "test_acc": 100.0,
@@ -22,7 +22,7 @@
     {
         "model_name": "M3_BatchNormCNN",
         "params": 1929159,
-        "flops_m": 5.512704,
+        "flops_m": 152.233728,
         "latency_ms": 2.1287795796524733,
         "best_val_acc": 100.0,
         "test_acc": 100.0,
@@ -32,7 +32,7 @@
     {
         "model_name": "M4_VoiceResNet",
         "params": 307687,
-        "flops_m": 14.941696,
+        "flops_m": 771.68,
         "latency_ms": 4.821489159949124,
         "best_val_acc": 100.0,
         "test_acc": 100.0,
@@ -42,7 +42,7 @@
     {
         "model_name": "M5_SE_VoiceResNet",
         "params": 310503,
-        "flops_m": 14.947328,
+        "flops_m": 771.685632,
         "latency_ms": 5.47962875047233,
         "best_val_acc": 100.0,
         "test_acc": 100.0,
